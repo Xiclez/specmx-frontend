@@ -1,7 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Login from './components/Login';
-import BlogManager from './components/BlogManager';
+import BlogList from './components/BlogList';
+import BlogEditor from './components/BlogEditor';
 import './App.css'; // Estilos generales
 
 const App = () => {
@@ -15,8 +16,9 @@ const App = () => {
         <Router>
             <Routes>
                 <Route path="/login" element={<Login />} />
-                <Route path="/blog" element={isAuthenticated() ? <BlogManager /> : <Navigate to="/login" />} />
-                <Route path="/" element={<Navigate to="/login" />} />
+                <Route path="/blog" element={isAuthenticated() ? <BlogList /> : <Navigate to="/login" />} />
+                <Route path="/editor/:id?" element={isAuthenticated() ? <BlogEditor /> : <Navigate to="/login" />} />
+                <Route path="/" element={<Navigate to={isAuthenticated() ? "/blog" : "/login"} />} />
             </Routes>
         </Router>
     );

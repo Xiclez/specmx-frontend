@@ -3,15 +3,19 @@ import axios from 'axios';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useDropzone } from 'react-dropzone';
+import BlogCard from './BlogCard'; // Importar el nuevo componente de tarjeta
 import './BlogManager.css'; // Estilos específicos para el componente de gestor de blogs
 
 const BlogManager = () => {
     const [blogs, setBlogs] = useState([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [images, setImages] = useState([]);
+    const [headerImage, setHeaderImage] = useState('');
+    const [contentImage1, setContentImage1] = useState('');
+    const [contentImage2, setContentImage2] = useState('');
     const [autor, setAutor] = useState('');
     const [editingBlog, setEditingBlog] = useState(null);
+    const [uploadStage, setUploadStage] = useState(0);
 
     const fetchBlogs = async () => {
         const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/blog/posts`);
@@ -26,6 +30,7 @@ const BlogManager = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
+            const images = [headerImage, contentImage1, contentImage2];
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/blog/createPost`, { title, content, images, autor }, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -34,8 +39,11 @@ const BlogManager = () => {
             setBlogs([...blogs, response.data]);
             setTitle('');
             setContent('');
-            setImages([]);
+            setHeaderImage('');
+            setContentImage1('');
+            setContentImage2('');
             setAutor('');
+            setUploadStage(0);
         } catch (err) {
             console.error(err);
         }
@@ -45,6 +53,7 @@ const BlogManager = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
+            const images = [headerImage, contentImage1, contentImage2];
             const response = await axios.put(`${process.env.REACT_APP_API_URL}/api/blog/posts/${editingBlog._id}`, { title, content, images, autor }, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -56,9 +65,12 @@ const BlogManager = () => {
             setBlogs(updatedBlogs);
             setTitle('');
             setContent('');
-            setImages([]);
+            setHeaderImage('');
+            setContentImage1('');
+            setContentImage2('');
             setAutor('');
             setEditingBlog(null);
+            setUploadStage(0);
         } catch (err) {
             console.error(err);
         }
@@ -81,23 +93,35 @@ const BlogManager = () => {
     const startEditing = (blog) => {
         setTitle(blog.title);
         setContent(blog.content);
-        setImages(blog.images);
+        setHeaderImage(blog.images[0] || '');
+        setContentImage1(blog.images[1] || '');
+        setContentImage2(blog.images[2] || '');
         setAutor(blog.autor);
         setEditingBlog(blog);
     };
 
-    const handleImageUpload = async (files) => {
-        const uploads = files.map(async (file) => {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', 'your_cloudinary_upload_preset'); // Cambia esto a tu upload preset
+    const handleImageUpload = async (fileList) => {
+        const file = fileList[0];
+        const formData = new FormData();
+        formData.append('image', file);
 
-            const response = await axios.post('https://api.cloudinary.com/v1_1/your_cloudinary_cloud_name/image/upload', formData);
-            return response.data.secure_url;
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/image/upload`, formData, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
         });
 
-        const uploadedImages = await Promise.all(uploads);
-        setImages([...images, ...uploadedImages]);
+        const imageUrl = response.data.url;
+        if (uploadStage === 0) {
+            setHeaderImage(imageUrl);
+            setUploadStage(1);
+        } else if (uploadStage === 1) {
+            setContentImage1(imageUrl);
+            setUploadStage(2);
+        } else if (uploadStage === 2) {
+            setContentImage2(imageUrl);
+            setUploadStage(3); // Upload completed
+        }
     };
 
     const handleFileUpload = async (acceptedFiles) => {
@@ -113,6 +137,10 @@ const BlogManager = () => {
     };
 
     const { getRootProps, getInputProps } = useDropzone({ onDrop: handleFileUpload, accept: ['.pdf', '.docx', '.txt'] });
+
+    const handleViewBlog = (blog) => {
+        // Lógica para ver el blog completo (por ejemplo, redirigir a una página de detalles)
+    };
 
     return (
         <div className="blog-manager-container">
@@ -132,13 +160,32 @@ const BlogManager = () => {
                     <ReactQuill value={content} onChange={setContent} />
                 </div>
                 <div>
-                    <label>Image URLs:</label>
+                    <label>{uploadStage === 0 ? 'Upload Header Image' : uploadStage === 1 ? 'Upload Content Image 1' : 'Upload Content Image 2'}</label>
+                    <input type="file" onChange={(e) => handleImageUpload(e.target.files)} />
+                </div>
+                <div>
+                    <label>Header Image URL:</label>
                     <input
                         type="text"
-                        value={images.join(', ')}
+                        value={headerImage}
                         readOnly
                     />
-                    <input type="file" onChange={(e) => handleImageUpload(e.target.files)} multiple />
+                </div>
+                <div>
+                    <label>Content Image 1 URL:</label>
+                    <input
+                        type="text"
+                        value={contentImage1}
+                        readOnly
+                    />
+                </div>
+                <div>
+                    <label>Content Image 2 URL:</label>
+                    <input
+                        type="text"
+                        value={contentImage2}
+                        readOnly
+                    />
                 </div>
                 <div>
                     <label>Author:</label>
@@ -155,20 +202,17 @@ const BlogManager = () => {
                 <input {...getInputProps()} />
                 <p>Drag & drop a file here, or click to select files</p>
             </div>
-            <ul>
+            <div className="blog-cards-container">
                 {blogs.map(blog => (
-                    <li key={blog._id}>
-                        <h3>{blog.title}</h3>
-                        <p>{blog.content}</p>
-                        {blog.images.map((image, index) => (
-                            <img key={index} src={image} alt={`Blog ${index}`} />
-                        ))}
-                        <p><strong>Author:</strong> {blog.autor}</p>
-                        <button onClick={() => startEditing(blog)}>Edit</button>
-                        <button onClick={() => handleDeleteBlog(blog._id)}>Delete</button>
-                    </li>
+                    <BlogCard 
+                        key={blog._id} 
+                        blog={blog} 
+                        onView={handleViewBlog} 
+                        onEdit={startEditing} 
+                        onDelete={handleDeleteBlog} 
+                    />
                 ))}
-            </ul>
+            </div>
         </div>
     );
 };

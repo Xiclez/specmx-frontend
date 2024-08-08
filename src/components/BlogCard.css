@@ -1,0 +1,46 @@
+.blog-card {
+    width: 300px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin: 16px;
+}
+
+.blog-card-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.blog-card-content {
+    padding: 16px;
+}
+
+.blog-card-content h3 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.blog-card-content p {
+    margin: 8px 0;
+}
+
+.blog-card-actions {
+    display: flex;
+    justify-content: space-between;
+}
+
+.blog-card-actions button {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.blog-card-actions button:hover {
+    background-color: #0056b3;
+}
