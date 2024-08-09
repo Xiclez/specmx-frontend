@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import Login from './components/Login';
 import BlogList from './components/BlogList';
 import BlogEditor from './components/BlogEditor';
+import ClientEditor from './components/ClientEditor';
+import ClientList from './components/ClientList';
 import './App.css'; // Estilos generales
 
 const App = () => {
@@ -17,7 +19,9 @@ const App = () => {
             <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/blog" element={isAuthenticated() ? <BlogList /> : <Navigate to="/login" />} />
-                <Route path="/editor/:id?" element={isAuthenticated() ? <BlogEditor /> : <Navigate to="/login" />} />
+                <Route path="/blogedit/:id?" element={isAuthenticated() ? <BlogEditor /> : <Navigate to="/login" />} />
+                <Route path="/clients" element={isAuthenticated() ? <ClientList /> : <Navigate to="/login" />} />
+                <Route path="/clientedit/:id?" element={isAuthenticated() ? <ClientEditor /> : <Navigate to="/login" />} />
                 <Route path="/" element={<Navigate to={isAuthenticated() ? "/blog" : "/login"} />} />
             </Routes>
         </Router>
