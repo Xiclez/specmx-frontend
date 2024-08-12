@@ -1,67 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
-import './ClientEditor.css';
-import * as pdfjsLib from 'pdfjs-dist';
-import jsQR from 'jsqr';
-
-// Set the workerSrc property for pdfjsLib
-pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
-
-// Function to extract QR code URL from the first page of the PDF
-export const extractQrCodeUrl = async (file) => {
-    try {
-        const pdfBytes = await file.arrayBuffer();
-        const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-
-        // Get the first page
-        const page = await pdfDoc.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
-
-        // Prepare a canvas element
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        // Render the page into the canvas context
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-        // Define quadrants
-        const quadrants = [
-            { x: 0, y: 0, width: canvas.width / 2, height: canvas.height / 2 }, // Top-left
-            { x: canvas.width / 2, y: 0, width: canvas.width / 2, height: canvas.height / 2 }, // Top-right
-            { x: 0, y: canvas.height / 2, width: canvas.width / 2, height: canvas.height / 2 }, // Bottom-left
-            { x: canvas.width / 2, y: canvas.height / 2, width: canvas.width / 2, height: canvas.height / 2 } // Bottom-right
-        ];
-
-        // Scan each quadrant for a QR code
-        for (const quadrant of quadrants) {
-            const croppedData = context.getImageData(
-                quadrant.x, quadrant.y,
-                quadrant.width, quadrant.height
-            );
-
-            // Scan the cropped image for a QR code
-            const qrCode = jsQR(croppedData.data, quadrant.width, quadrant.height);
-
-            if (qrCode) {
-                return qrCode.data; // Return the URL found in the QR code
-            }
-        }
-
-        throw new Error('No se encontró ningún código QR en la primera página.');
-    } catch (error) {
-        console.error('Error al extraer la URL del QR:', error);
-        throw error;
-    }
-};
+import CsfUploader from './CsfUploader';
 
 const ClientEditor = ({ onSave }) => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const [clientType, setClientType] = useState('physical'); // 'physical' or 'legal'
+    const [clientType, setClientType] = useState('physical');
     const [clientData, setClientData] = useState({
         CURP: '', Nombre: '', ApellidoPaterno: '', ApellidoMaterno: '', FechaNacimiento: '',
         FechaInicioOperaciones: '', SituacionContribuyente: '', FechaUltimoCambioSituacion: '',
@@ -72,39 +18,119 @@ const ClientEditor = ({ onSave }) => {
         },
         caracteristicasFiscales: []
     });
+    const [disableRadioButtons, setDisableRadioButtons] = useState(false);
+    const [profilePhoto, setProfilePhoto] = useState(''); // Estado para la foto de perfil
+    const [files, setFiles] = useState([]); // Estado para los archivos adicionales
+    const [uploadStage, setUploadStage] = useState(0); // Para manejar la secuencia de carga de archivos
 
     useEffect(() => {
         if (id) {
             const fetchClient = async () => {
-                const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/client/${id}`);
-                setClientData(response.data);
-                setClientType(response.data.CURP ? 'physical' : 'legal');
+                const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/client/getClient/${id}`);
+                const client = response.data;
+                setClientData({
+                    CURP: client.datosIdentificacion.CURP || '',
+                    Nombre: client.datosIdentificacion.Nombre || '',
+                    ApellidoPaterno: client.datosIdentificacion.ApellidoPaterno || '',
+                    ApellidoMaterno: client.datosIdentificacion.ApellidoMaterno || '',
+                    FechaNacimiento: client.datosIdentificacion.FechaNacimiento || '',
+                    DenominacionRazonSocial: client.datosIdentificacion.DenominacionRazonSocial || '',
+                    RegimenCapital: client.datosIdentificacion.RegimenCapital || '',
+                    FechaConstitucion: client.datosIdentificacion.FechaConstitucion || '',
+                    FechaInicioOperaciones: client.datosIdentificacion.FechaInicioOperaciones || '',
+                    SituacionContribuyente: client.datosIdentificacion.SituacionContribuyente || '',
+                    FechaUltimoCambioSituacion: client.datosIdentificacion.FechaUltimoCambioSituacion || '',
+                    datosUbicacion: {
+                        ...client.datosUbicacion
+                    },
+                    caracteristicasFiscales: client.caracteristicasFiscales.filter(fiscal => fiscal.Regimen && fiscal.FechaAlta)
+                });
+                setProfilePhoto(client.profilePhoto || '');
+                setFiles(client.files || []);
+                setClientType(client.datosIdentificacion.CURP ? 'physical' : 'legal');
             };
+
             fetchClient();
         }
     }, [id]);
 
-    const handleFileUpload = async (fileList) => {
+    const handleUploadComplete = (data) => {
+        const { CURP, Nombre, ApellidoPaterno, ApellidoMaterno, FechaNacimiento, DenominacionRazonSocial, RegimenCapital, FechaConstitucion } = data.datosIdentificacion;
+
+        setClientData((prevState) => ({
+            ...prevState,
+            CURP: CURP || prevState.CURP,
+            Nombre: Nombre || prevState.Nombre,
+            ApellidoPaterno: ApellidoPaterno || prevState.ApellidoPaterno,
+            ApellidoMaterno: ApellidoMaterno || prevState.ApellidoMaterno,
+            FechaNacimiento: FechaNacimiento || prevState.FechaNacimiento,
+            DenominacionRazonSocial: DenominacionRazonSocial || prevState.DenominacionRazonSocial,
+            RegimenCapital: RegimenCapital || prevState.RegimenCapital,
+            FechaConstitucion: FechaConstitucion || prevState.FechaConstitucion,
+            FechaInicioOperaciones: data.datosIdentificacion.FechaInicioOperaciones || prevState.FechaInicioOperaciones,
+            SituacionContribuyente: data.datosIdentificacion.SituacionContribuyente || prevState.SituacionContribuyente,
+            FechaUltimoCambioSituacion: data.datosIdentificacion.FechaUltimoCambioSituacion || prevState.FechaUltimoCambioSituacion,
+            datosUbicacion: {
+                ...prevState.datosUbicacion,
+                ...data.datosUbicacion
+            },
+            caracteristicasFiscales: data.caracteristicasFiscales.filter(fiscal => fiscal.Regimen && fiscal.FechaAlta)
+        }));
+
+        setClientType(CURP ? 'physical' : 'legal');
+        setDisableRadioButtons(true);
+    };
+
+    const handleImageUpload = async (fileList) => {
         const file = fileList[0];
-        try {
-            const pdfUrl = await extractQrCodeUrl(file);
-            const scannedData = await axios.post(`${process.env.REACT_APP_API_URL}/api/client/csf`, { url: pdfUrl }, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            setClientData(scannedData.data);
-        } catch (error) {
-            console.error('Error scanning PDF:', error);
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/helper/uploadFile`, formData, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        const imageUrl = response.data.url;
+        if (uploadStage === 0) {
+            setProfilePhoto(imageUrl); // Guardar la URL de la foto de perfil
+            setUploadStage(1);
+        } else {
+            setFiles(prevFiles => [...prevFiles, imageUrl]); // Agregar archivos adicionales
+            setUploadStage(uploadStage + 1);
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const payload = {
+            datosIdentificacion: {
+                CURP: clientData.CURP,
+                Nombre: clientData.Nombre,
+                ApellidoPaterno: clientData.ApellidoPaterno,
+                ApellidoMaterno: clientData.ApellidoMaterno,
+                FechaNacimiento: clientData.FechaNacimiento,
+                FechaInicioOperaciones: clientData.FechaInicioOperaciones,
+                SituacionContribuyente: clientData.SituacionContribuyente,
+                FechaUltimoCambioSituacion: clientData.FechaUltimoCambioSituacion,
+                DenominacionRazonSocial: clientData.DenominacionRazonSocial,
+                RegimenCapital: clientData.RegimenCapital,
+                FechaConstitucion: clientData.FechaConstitucion
+            },
+            datosUbicacion: clientData.datosUbicacion,
+            caracteristicasFiscales: clientData.caracteristicasFiscales,
+            profilePhoto,  // Añadir la foto de perfil
+            files  // Añadir los archivos
+        };
+
         if (id) {
-            await axios.put(`${process.env.REACT_APP_API_URL}/api/client/updateClient/${id}`, clientData, {
+            await axios.put(`${process.env.REACT_APP_API_URL}/api/client/updateClient/${id}`, payload, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
         } else {
-            await axios.post(`${process.env.REACT_APP_API_URL}/api/client/createClient`, clientData, {
+            await axios.post(`${process.env.REACT_APP_API_URL}/api/client/createClient`, payload, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
         }
@@ -121,12 +147,45 @@ const ClientEditor = ({ onSave }) => {
                         type="radio"
                         checked={clientType === 'physical'}
                         onChange={() => setClientType('physical')}
+                        disabled={disableRadioButtons}
                     /> Physical
                     <input
                         type="radio"
                         checked={clientType === 'legal'}
                         onChange={() => setClientType('legal')}
+                        disabled={disableRadioButtons}
                     /> Legal
+                </div>
+
+                {/* Campos comunes para ambos tipos de clientes */}
+                <div>
+                    <label>Fecha de Inicio de Operaciones:</label>
+                    <input
+                        type="date"
+                        value={clientData.FechaInicioOperaciones}
+                        onChange={(e) => setClientData({ ...clientData, FechaInicioOperaciones: e.target.value })}
+                        required
+                    />
+                </div>
+                <div>
+                    <label>Situación del Contribuyente:</label>
+                    <select
+                        value={clientData.SituacionContribuyente}
+                        onChange={(e) => setClientData({ ...clientData, SituacionContribuyente: e.target.value })}
+                        required
+                    >
+                        <option value="ACTIVO">ACTIVO</option>
+                        <option value="INACTIVO">INACTIVO</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Fecha del Último Cambio de Situación:</label>
+                    <input
+                        type="date"
+                        value={clientData.FechaUltimoCambioSituacion}
+                        onChange={(e) => setClientData({ ...clientData, FechaUltimoCambioSituacion: e.target.value })}
+                        required
+                    />
                 </div>
 
                 {clientType === 'physical' ? (
@@ -175,33 +234,6 @@ const ClientEditor = ({ onSave }) => {
                                 required
                             />
                         </div>
-                        <div>
-                            <label>Fecha de Inicio de Operaciones:</label>
-                            <input
-                                type="date"
-                                value={clientData.FechaInicioOperaciones}
-                                onChange={(e) => setClientData({ ...clientData, FechaInicioOperaciones: e.target.value })}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label>Situación del Contribuyente:</label>
-                            <input
-                                type="text"
-                                value={clientData.SituacionContribuyente}
-                                onChange={(e) => setClientData({ ...clientData, SituacionContribuyente: e.target.value })}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label>Fecha del Último Cambio de Situación:</label>
-                            <input
-                                type="date"
-                                value={clientData.FechaUltimoCambioSituacion}
-                                onChange={(e) => setClientData({ ...clientData, FechaUltimoCambioSituacion: e.target.value })}
-                                required
-                            />
-                        </div>
                     </>
                 ) : (
                     <>
@@ -229,13 +261,12 @@ const ClientEditor = ({ onSave }) => {
                                 type="date"
                                 value={clientData.FechaConstitucion}
                                 onChange={(e) => setClientData({ ...clientData, FechaConstitucion: e.target.value })}
-                                required
                             />
                         </div>
                     </>
                 )}
 
-                {/* Datos de Ubicación */}
+                {/* Datos de Ubicación y Características Fiscales */}
                 <div>
                     <label>Entidad Federativa:</label>
                     <input
@@ -344,41 +375,57 @@ const ClientEditor = ({ onSave }) => {
                     />
                 </div>
 
-                {/* Características Fiscales */}
                 <div>
                     <label>Características Fiscales:</label>
                     {clientData.caracteristicasFiscales.map((fiscal, index) => (
-                        <div key={index}>
-                            <input
-                                type="text"
-                                value={fiscal.Regimen}
-                                onChange={(e) => {
-                                    const updatedFiscales = [...clientData.caracteristicasFiscales];
-                                    updatedFiscales[index].Regimen = e.target.value;
-                                    setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
-                                }}
-                                required
-                            />
-                            <input
-                                type="date"
-                                value={fiscal.FechaAlta || ''}
-                                onChange={(e) => {
-                                    const updatedFiscales = [...clientData.caracteristicasFiscales];
-                                    updatedFiscales[index].FechaAlta = e.target.value;
-                                    setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
-                                }}
-                            />
-                        </div>
+                        fiscal.Regimen && fiscal.FechaAlta ? (
+                            <div key={index}>
+                                <input
+                                    type="text"
+                                    value={fiscal.Regimen}
+                                    onChange={(e) => {
+                                        const updatedFiscales = [...clientData.caracteristicasFiscales];
+                                        updatedFiscales[index].Regimen = e.target.value;
+                                        setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
+                                    }}
+                                    required
+                                />
+                                <input
+                                    type="date"
+                                    value={fiscal.FechaAlta}
+                                    onChange={(e) => {
+                                        const updatedFiscales = [...clientData.caracteristicasFiscales];
+                                        updatedFiscales[index].FechaAlta = e.target.value;
+                                        setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
+                                    }}
+                                />
+                            </div>
+                        ) : null
                     ))}
                 </div>
 
+                <CsfUploader onUploadComplete={handleUploadComplete} />
+
                 <div>
-                    <label>Archivos de PDF:</label>
-                    <input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={(e) => handleFileUpload(e.target.files)}
-                    />
+                    <label>Upload Profile Photo:</label>
+                    <input type="file" onChange={(e) => handleImageUpload(e.target.files)} />
+                </div>
+                <div>
+                    <label>Profile Photo URL:</label>
+                    <input type="text" value={profilePhoto} readOnly />
+                </div>
+
+                <div>
+                    <label>Upload Files:</label>
+                    <input type="file" onChange={(e) => handleImageUpload(e.target.files)} />
+                </div>
+                <div>
+                    {files.map((file, index) => (
+                        <div key={index}>
+                            <label>File {index + 1} URL:</label>
+                            <input type="text" value={file} readOnly />
+                        </div>
+                    ))}
                 </div>
 
                 <button type="submit">Save Client</button>

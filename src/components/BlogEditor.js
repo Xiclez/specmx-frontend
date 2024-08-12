@@ -62,7 +62,7 @@ const BlogEditor = () => {
         const formData = new FormData();
         formData.append('image', file);
 
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/blog/uploadImg`, formData, {
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/helper/uploadFile`, formData, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
