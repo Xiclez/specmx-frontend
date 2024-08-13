@@ -23,6 +23,7 @@ const ClientEditor = ({ onSave }) => {
     const [files, setFiles] = useState([]); // Estado para los archivos adicionales
     const [uploadStage, setUploadStage] = useState(0); // Para manejar la secuencia de carga de archivos
 
+    // Modifica la carga de datos cuando se obtienen los datos del cliente
     useEffect(() => {
         if (id) {
             const fetchClient = async () => {
@@ -43,7 +44,10 @@ const ClientEditor = ({ onSave }) => {
                     datosUbicacion: {
                         ...client.datosUbicacion
                     },
-                    caracteristicasFiscales: client.caracteristicasFiscales.filter(fiscal => fiscal.Regimen && fiscal.FechaAlta)
+                    caracteristicasFiscales: client.caracteristicasFiscales.map(fiscal => ({
+                        ...fiscal,
+                        FechaAlta: fiscal.FechaAlta || ''
+                    }))
                 });
                 setProfilePhoto(client.profilePhoto || '');
                 setFiles(client.files || []);
@@ -56,7 +60,7 @@ const ClientEditor = ({ onSave }) => {
 
     const handleUploadComplete = (data) => {
         const { CURP, Nombre, ApellidoPaterno, ApellidoMaterno, FechaNacimiento, DenominacionRazonSocial, RegimenCapital, FechaConstitucion } = data.datosIdentificacion;
-
+    
         setClientData((prevState) => ({
             ...prevState,
             CURP: CURP || prevState.CURP,
@@ -74,9 +78,12 @@ const ClientEditor = ({ onSave }) => {
                 ...prevState.datosUbicacion,
                 ...data.datosUbicacion
             },
-            caracteristicasFiscales: data.caracteristicasFiscales.filter(fiscal => fiscal.Regimen && fiscal.FechaAlta)
+            caracteristicasFiscales: data.caracteristicasFiscales.map(fiscal => ({
+                ...fiscal,
+                FechaAlta: fiscal.FechaAlta || ''
+            }))
         }));
-
+    
         setClientType(CURP ? 'physical' : 'legal');
         setDisableRadioButtons(true);
     };
@@ -102,9 +109,23 @@ const ClientEditor = ({ onSave }) => {
         }
     };
 
+    const handleDateInputChange = (e, key) => {
+        let value = e.target.value.replace(/\D/g, ''); // Elimina cualquier carácter no numérico
+        if (value.length > 8) value = value.slice(0, 8); // Limita a 8 dígitos (YYYYMMDD)
+        
+        // Agrega los guiones automáticamente
+        if (value.length > 4) value = value.slice(0, 4) + '-' + value.slice(4);
+        if (value.length > 7) value = value.slice(0, 7) + '-' + value.slice(7);
+        
+        setClientData(prevData => ({
+            ...prevData,
+            [key]: value
+        }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+    
         const payload = {
             datosIdentificacion: {
                 CURP: clientData.CURP,
@@ -124,7 +145,7 @@ const ClientEditor = ({ onSave }) => {
             profilePhoto,  // Añadir la foto de perfil
             files  // Añadir los archivos
         };
-
+    
         if (id) {
             await axios.put(`${process.env.REACT_APP_API_URL}/api/client/updateClient/${id}`, payload, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -161,9 +182,12 @@ const ClientEditor = ({ onSave }) => {
                 <div>
                     <label>Fecha de Inicio de Operaciones:</label>
                     <input
-                        type="date"
+                        type="text"
                         value={clientData.FechaInicioOperaciones}
-                        onChange={(e) => setClientData({ ...clientData, FechaInicioOperaciones: e.target.value })}
+                        onChange={(e) => handleDateInputChange(e, 'FechaInicioOperaciones')}
+                        placeholder="YYYY-MM-DD"
+                        maxLength="10"
+                        pattern="\d{4}-\d{2}-\d{2}"
                         required
                     />
                 </div>
@@ -181,9 +205,12 @@ const ClientEditor = ({ onSave }) => {
                 <div>
                     <label>Fecha del Último Cambio de Situación:</label>
                     <input
-                        type="date"
+                        type="text"
                         value={clientData.FechaUltimoCambioSituacion}
-                        onChange={(e) => setClientData({ ...clientData, FechaUltimoCambioSituacion: e.target.value })}
+                        onChange={(e) => handleDateInputChange(e, 'FechaUltimoCambioSituacion')}
+                        placeholder="YYYY-MM-DD"
+                        maxLength="10"
+                        pattern="\d{4}-\d{2}-\d{2}"
                         required
                     />
                 </div>
@@ -228,9 +255,12 @@ const ClientEditor = ({ onSave }) => {
                         <div>
                             <label>Fecha de Nacimiento:</label>
                             <input
-                                type="date"
+                                type="text"
                                 value={clientData.FechaNacimiento}
-                                onChange={(e) => setClientData({ ...clientData, FechaNacimiento: e.target.value })}
+                                onChange={(e) => handleDateInputChange(e, 'FechaNacimiento')}
+                                placeholder="YYYY-MM-DD"
+                                maxLength="10"
+                                pattern="\d{4}-\d{2}-\d{2}"
                                 required
                             />
                         </div>
@@ -258,9 +288,12 @@ const ClientEditor = ({ onSave }) => {
                         <div>
                             <label>Fecha de Constitución:</label>
                             <input
-                                type="date"
+                                type="text"
                                 value={clientData.FechaConstitucion}
-                                onChange={(e) => setClientData({ ...clientData, FechaConstitucion: e.target.value })}
+                                onChange={(e) => handleDateInputChange(e, 'FechaConstitucion')}
+                                placeholder="YYYY-MM-DD"
+                                maxLength="10"
+                                pattern="\d{4}-\d{2}-\d{2}"
                             />
                         </div>
                     </>
@@ -391,13 +424,12 @@ const ClientEditor = ({ onSave }) => {
                                     required
                                 />
                                 <input
-                                    type="date"
+                                    type="text"
                                     value={fiscal.FechaAlta}
-                                    onChange={(e) => {
-                                        const updatedFiscales = [...clientData.caracteristicasFiscales];
-                                        updatedFiscales[index].FechaAlta = e.target.value;
-                                        setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
-                                    }}
+                                    onChange={(e) => handleDateInputChange(e, `caracteristicasFiscales[${index}].FechaAlta`)}
+                                    placeholder="YYYY-MM-DD"
+                                    maxLength="10"
+                                    pattern="\d{4}-\d{2}-\d{2}"
                                 />
                             </div>
                         ) : null
