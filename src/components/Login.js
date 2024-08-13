@@ -10,13 +10,28 @@ const Login = () => {
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Evitar recarga de la página
+        setError(''); // Limpiar errores previos
+
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, { email, password });
-            localStorage.setItem('token', response.data.token);
-            console.log('Token stored:', response.data.token); // Verificar si el token se almacena correctamente
-            navigate('/blog');
+            const token = response.data.token;
+
+            if (token) {
+                localStorage.setItem('token', token);
+                console.log('Token stored:', token); // Verificar si el token se almacena correctamente
+                
+                // Establecer un tiempo de expiración del token (opcional)
+                const expiryTime = new Date().getTime() + 30 * 60 * 1000; // 30 minutos
+                localStorage.setItem('tokenExpiry', expiryTime);
+                
+                // Redirigir al usuario a la página de inicio
+                navigate('/home');
+            } else {
+                setError('Login failed: No token received.');
+            }
         } catch (err) {
+            console.error('Login error:', err);
             setError('Invalid email or password');
         }
     };
