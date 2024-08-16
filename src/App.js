@@ -4,11 +4,16 @@ import Login from './components/Login';
 import BlogList from './components/BlogList';
 import BlogEditor from './components/BlogEditor';
 import ClientEditor from './components/ClientEditor';
+
 import ClientList from './components/ClientList';
+//import ClientList from './components/ClientTable';
+
 import ClientDetails from './components/ClientDetails'; 
 import Home from './components/Home';
 import Sidebar from './components/Sidebar';
 import Orders from './components/OrderManagement';
+import TestTable from './components/ClientTable';
+import TestClient from './components/ClientForm';
 import './App.css'; 
 
 const App = () => {
@@ -42,6 +47,8 @@ const App = () => {
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/home" element={isAuthenticated() ? <Home /> : <Navigate to="/login" />} />
+                    <Route path="/test" element={isAuthenticated() ? <TestTable /> : <Navigate to="/login" />} />
+                    <Route path="/test2" element={isAuthenticated() ? <TestClient /> : <Navigate to="/login" />} />
                     <Route path="/blog" element={isAuthenticated() ? <BlogList /> : <Navigate to="/login" />} />
                     <Route path="/blogedit/:id?" element={isAuthenticated() ? <BlogEditor /> : <Navigate to="/login" />} />
                     <Route path="/clients" element={isAuthenticated() ? <ClientList /> : <Navigate to="/login" />} />

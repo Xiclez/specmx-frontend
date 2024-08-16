@@ -9,7 +9,7 @@ const ClientEditor = ({ onSave }) => {
 
     const [clientType, setClientType] = useState('physical');
     const [clientData, setClientData] = useState({
-        CURP: '', Nombre: '', ApellidoPaterno: '', ApellidoMaterno: '', FechaNacimiento: '',
+        RFC:'', CURP: '', Nombre: '', ApellidoPaterno: '', ApellidoMaterno: '', FechaNacimiento: '',
         FechaInicioOperaciones: '', SituacionContribuyente: '', FechaUltimoCambioSituacion: '',
         DenominacionRazonSocial: '', RegimenCapital: '', FechaConstitucion: '',
         datosUbicacion: {
@@ -30,6 +30,7 @@ const ClientEditor = ({ onSave }) => {
                 const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/client/getClient/${id}`);
                 const client = response.data;
                 setClientData({
+                    RFC: client.datosIdentificacion.RFC || '',
                     CURP: client.datosIdentificacion.CURP || '',
                     Nombre: client.datosIdentificacion.Nombre || '',
                     ApellidoPaterno: client.datosIdentificacion.ApellidoPaterno || '',
@@ -59,10 +60,11 @@ const ClientEditor = ({ onSave }) => {
     }, [id]);
 
     const handleUploadComplete = (data) => {
-        const { CURP, Nombre, ApellidoPaterno, ApellidoMaterno, FechaNacimiento, DenominacionRazonSocial, RegimenCapital, FechaConstitucion } = data.datosIdentificacion;
+        const { RFC,CURP, Nombre, ApellidoPaterno, ApellidoMaterno, FechaNacimiento, DenominacionRazonSocial, RegimenCapital, FechaConstitucion } = data.datosIdentificacion;
     
         setClientData((prevState) => ({
             ...prevState,
+            RFC: RFC || prevState.RFC,
             CURP: CURP || prevState.CURP,
             Nombre: Nombre || prevState.Nombre,
             ApellidoPaterno: ApellidoPaterno || prevState.ApellidoPaterno,
@@ -128,6 +130,7 @@ const ClientEditor = ({ onSave }) => {
     
         const payload = {
             datosIdentificacion: {
+                RFC: clientData.RFC,
                 CURP: clientData.CURP,
                 Nombre: clientData.Nombre,
                 ApellidoPaterno: clientData.ApellidoPaterno,
@@ -179,6 +182,16 @@ const ClientEditor = ({ onSave }) => {
                 </div>
 
                 {/* Campos comunes para ambos tipos de clientes */}
+                <div>
+    <label>RFC:</label>
+    <input
+        type="text"
+        value={clientData.RFC}
+        onChange={(e) => setClientData({ ...clientData, RFC: e.target.value })}
+        required
+    />
+</div>
+
                 <div>
                     <label>Fecha de Inicio de Operaciones:</label>
                     <input
