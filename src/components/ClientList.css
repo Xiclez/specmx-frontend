@@ -1,34 +1,100 @@
-/* ClientList.css */
-
-.client-list-container {
+.client-list {
     padding: 20px;
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #f7f8fa; /* Fondo del contenedor principal */
 }
 
-.client-list-container h2 {
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
     margin-bottom: 20px;
+}
+
+.header h2 {
     font-size: 24px;
+    font-weight: 600;
+    margin: 0;
     color: #333;
 }
 
-.client-list-container .client-cards-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-}
-
-.client-list-container .client-cards-container button {
-    padding: 10px 15px;
-    background-color: #007bff;
-    color: white;
+.create-client {
+    background-color: #1a73e8;
+    color: #fff;
+    padding: 10px 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
+    font-size: 14px;
     cursor: pointer;
-    transition: background-color 0.3s;
 }
 
-.client-list-container .client-cards-container button:hover {
-    background-color: #0056b3;
+.create-client:hover {
+    background-color: #155cb0;
+}
+
+.client-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.client-table thead {
+    background-color: #f1f3f4;
+}
+
+.client-table th,
+.client-table td {
+    padding: 12px;
+    text-align: left;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.client-table th {
+    font-weight: 600;
+    font-size: 14px;
+    color: #666;
+}
+
+.client-table td {
+    font-size: 14px;
+}
+
+.client-table .pending {
+    color: #888;
+    font-style: italic;
+}
+
+.regimen-dropdown {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.plus-icon {
+    margin-left: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.regimen-list {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    z-index: 1;
+    white-space: nowrap;
+}
+
+.regimen-dropdown:hover .regimen-list {
+    display: block;
+}
+
+.regimen-item {
+    padding: 5px 10px;
+}
+
+.regimen-item:hover {
+    background-color: #ddd;
 }

@@ -1,87 +1,127 @@
-/* Navbar styles */
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    background-color: #333;
-    color: white;
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 1000;
-  }
-  
-  .hamburger-icon {
-    font-size: 18px;
-    cursor: pointer;
-    background: none;
-    border: none;
-    color: white;
-  }
-  
-  .navbar-right {
-    display: flex;
-    align-items: center;
-  }
-  
-  .navbar-username {
-    margin-right: 15px;
-  }
-  
-  .user-icon img {
-    width: 30px;
-    cursor: pointer;
-  }
-  
-  .dropdown-menu {
-    position: absolute;
-    right: 10px;
-    top: 50px;
-    background: white;
-    border: 1px solid #ccc;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  /* Sidebar styles */
-  .sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 250px;
-    height: 100%;
-    background-color: #444;
-    color: white;
-    padding-top: 60px;
-    z-index: 1001;
-    transform: translateX(0);
-    transition: transform 0.3s ease-in-out;
-  }
-  
-  .sidebar-nav ul {
-    list-style-type: none;
-    padding: 0;
-  }
-  
-  .sidebar-nav ul li {
-    padding: 10px 20px;
-  }
-  
-  .sidebar-nav ul li a {
-    color: white;
-    text-decoration: none;
-  }
-  
-  .sidebar .close-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: white;
-    cursor: pointer;
-  }
-  
+/* Configuración general del Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100%;
+  background-color: #bdbdbd;
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  transform: translateX(-100%); /* Oculta el sidebar inicialmente */
+}
+
+.sidebar.open {
+  transform: translateX(0); /* Muestra el sidebar cuando tiene la clase 'open' */
+}
+
+.sidebar__logo {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.sidebar__logo img {
+  max-width: 80%; /* Ajusta la escala máxima de la imagen al 80% del contenedor */
+  height: auto; /* Mantiene la proporción de la imagen */
+  display: block;
+  margin: 0 auto; /* Centra la imagen dentro de su contenedor */
+  width: 150px; /* Establece un ancho fijo más grande para la imagen */
+  height: 150px; /* Establece un alto fijo más grande para la imagen */
+}
+
+/* Configuración de la lista para asegurar que los enlaces estén en vertical */
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1; /* Para asegurar que el contenido del nav ocupe el espacio disponible */
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-nav li {
+  margin: 15px 0;
+  text-align: left;
+}
+
+.sidebar-nav li a {
+  color: #FFFFFF;
+  text-decoration: none;
+  font-size: 16px;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-nav li a:hover {
+  background-color: #2E2B4F;
+  border-radius: 8px;
+}
+
+.sidebar-nav li a i {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+.sidebar__logout {
+  padding: 20px;
+  text-align: center;
+}
+
+.sidebar__logout button {
+  background-color: #FFFFFF;
+  color: #45406F;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.sidebar__logout button i {
+  margin-right: 5px;
+}
+
+.sidebar__footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+}
+
+.sidebar__footer p {
+  margin: 0;
+}
+
+/* Estilo para el contenido principal, asegurando que se ajuste al sidebar */
+.app-content {
+  margin-left: 0; /* Inicialmente sin margen para ocupar toda la pantalla */
+  transition: margin-left 0.3s ease;
+  padding: 20px;
+}
+
+/* Ajuste cuando el sidebar está abierto */
+.sidebar.open ~ .app-content {
+  margin-left: 250px; /* Ajusta el contenido cuando el sidebar está abierto */
+}
+
+/* Ajuste cuando el sidebar está cerrado */
+.sidebar:not(.open) ~ .app-content {
+  margin-left: 0; /* El contenido ocupa toda la pantalla cuando el sidebar está cerrado */
+}
+
+/* Estilo para el ícono de hamburguesa */
+.hamburger-icon {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: #000000;
+  cursor: pointer;
+  z-index: 1100;
+}
