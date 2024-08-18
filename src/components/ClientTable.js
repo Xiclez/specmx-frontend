@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const ClientTable = () => {
   const [clients, setClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // Estado para el filtro seleccionado
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_API_URL}/api/client/getClients`)
@@ -43,6 +45,10 @@ const ClientTable = () => {
     setFilter(newFilter);
   };
 
+  const handleCreateClient = () => {
+    navigate('/clientedit');
+  };
+
   const filteredClients = clients.filter(client => {
     const nombreRazonSocial = getNombreRazonSocial(client.datosIdentificacion).toLowerCase();
     const rfc = client.datosIdentificacion.RFC ? client.datosIdentificacion.RFC.toLowerCase() : '';
@@ -70,7 +76,7 @@ const ClientTable = () => {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Clientes</h1>
-        <button className="bg-black text-white py-2 px-4 rounded">Crear Cliente</button>
+        <button className="bg-black text-white py-2 px-4 rounded" onClick={handleCreateClient}>Crear Cliente</button>
       </div>
       <div className="mb-4">
         <div className="flex space-x-4">

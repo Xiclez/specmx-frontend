@@ -5,6 +5,8 @@ import CsfUploader, { extractQrCodeUrl } from './CsfUploader';
 import estadosMunicipios from '../assets/estados-municipios.json';
 import regimenesFiscales from '../assets/c_RegimenFiscal.json';
 import TipoVialidad from '../assets/vialidades.json';
+import { PlusCircleIcon, MinusCircleIcon } from '@heroicons/react/solid';
+
 
 const ClientForm = () => {
   const { id } = useParams();
@@ -47,12 +49,6 @@ const ClientForm = () => {
       setFiles(prevFiles => [...prevFiles, mediaUrl]);
       setUploadStage(uploadStage + 1);
     }
-  };
-  const findBestMatch = (responseValue, options) => {
-    const lowerResponseValue = responseValue.toLowerCase();
-    return options.find(option => 
-      option.toLowerCase().includes(lowerResponseValue)
-    ) || responseValue; // Retorna el valor original si no encuentra coincidencias
   };
   
   const handleDateInputChange = (e, key) => {
@@ -105,15 +101,44 @@ const ClientForm = () => {
     navigate('/clients');
   };
 
+  const normalizeText = (text) => {
+    return text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+  
   const handleUploadComplete = (data) => {
-    const bestMatchState = findBestMatch(data.datosUbicacion.EntidadFederativa, Object.keys(estadosMunicipios));
-    const bestMatchMunicipio = findBestMatch(data.datosUbicacion.MunicipioDelegacion, estadosMunicipios[bestMatchState] || []);
-    
-    const updatedFiscales = data.caracteristicasFiscales.map(fiscal => {
-      const bestMatchRegimen = findBestMatch(fiscal.Regimen, regimenesFiscales.map(regimen => regimen.descripcion));
-      return { ...fiscal, Regimen: bestMatchRegimen };
+    const normalizedEntidad = normalizeText(data.datosUbicacion.EntidadFederativa);
+    const bestMatchState = Object.keys(estadosMunicipios).find(state => {
+      return normalizeText(state).includes(normalizedEntidad) || normalizedEntidad.includes(normalizeText(state));
     });
-
+  
+    const normalizedMunicipio = normalizeText(data.datosUbicacion.MunicipioDelegacion);
+    const bestMatchMunicipio = estadosMunicipios[bestMatchState]?.find(municipio => {
+      return normalizeText(municipio).includes(normalizedMunicipio) || normalizedMunicipio.includes(normalizeText(municipio));
+    });
+  
+    console.log('Entidad federativa recibida del servidor:', data.datosUbicacion.EntidadFederativa, 'Coincidencia:', bestMatchState);
+    console.log('Municipio recibido del servidor:', data.datosUbicacion.MunicipioDelegacion, 'Coincidencia:', bestMatchMunicipio);
+  
+    const updatedFiscales = data.caracteristicasFiscales.map(fiscal => {
+      const normalizedServerRegimen = normalizeText(fiscal.Regimen);
+      const matchedRegimen = regimenesFiscales.find(regimen => {
+        const normalizedJsonRegimen = normalizeText(regimen.descripcion);
+        return normalizedJsonRegimen.includes(normalizedServerRegimen) || normalizedServerRegimen.includes(normalizedJsonRegimen);
+      });
+  
+      if (!matchedRegimen) {
+        console.warn('No se encontró coincidencia para el régimen:', fiscal.Regimen);
+      }
+  
+      return { ...fiscal, Regimen: matchedRegimen ? matchedRegimen.descripcion : fiscal.Regimen };
+    });
+  
     setClientData((prevState) => ({
       ...prevState,
       RFC: data.datosIdentificacion.RFC || prevState.RFC,
@@ -130,22 +155,25 @@ const ClientForm = () => {
       FechaUltimoCambioSituacion: data.datosIdentificacion.FechaUltimoCambioSituacion || prevState.FechaUltimoCambioSituacion,
       datosUbicacion: {
         ...prevState.datosUbicacion,
-        EntidadFederativa: bestMatchState,
-        MunicipioDelegacion: bestMatchMunicipio,
+        EntidadFederativa: bestMatchState || prevState.datosUbicacion.EntidadFederativa,
+        MunicipioDelegacion: bestMatchMunicipio || prevState.datosUbicacion.MunicipioDelegacion,
         Colonia: data.datosUbicacion.Colonia || prevState.Colonia,
         TipoVialidad: data.datosUbicacion.TipoVialidad || prevState.TipoVialidad,
         NombreVialidad: data.datosUbicacion.NombreVialidad || prevState.NombreVialidad,
         NumeroExterior: data.datosUbicacion.NumeroExterior || prevState.NumeroExterior,
         NumeroInterior: data.datosUbicacion.NumeroInterior || prevState.NumeroInterior,
-        CP: data.datosUbicacion.CP || prevState.CP,
-        CorreoElectronico: data.datosUbicacion.CorreoElectronico || prevState.CorreoElectronico,
+        CP: data.datosUbicacion.CP || prevState.datosUbicacion.CP,
+        CorreoElectronico: data.datosUbicacion.CorreoElectronico || prevState.datosUbicacion.CorreoElectronico,
       },
       caracteristicasFiscales: updatedFiscales
     }));
-
+  
     setClientType(data.datosIdentificacion.CURP ? 'physical' : 'legal');
     setDisableRadioButtons(true);
   };
+  
+
+
 const handleCsfFileUpload = async (fileList) => {
     const file = fileList[0];
     if (!file) return;
@@ -220,6 +248,15 @@ const handleCsfFileUpload = async (fileList) => {
           files={files}
         />
       )}
+      <div className="flex justify-end mt-6">
+      <button 
+        type="submit"
+        onClick={handleSubmit} 
+        className="bg-blue-500 text-white py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-300"
+      >
+        Crear Cliente
+      </button>
+    </div>
     </div>
   );
 };
@@ -406,60 +443,95 @@ const LocationTab = ({ clientData, setClientData }) => (
   </div>
 );
 
-const FiscalTab = ({ clientData, setClientData, handleDateInputChange, handleMediaUpload, files }) => (
-  <div className="grid grid-cols-2 gap-8">
-    {clientData.caracteristicasFiscales.map((fiscal, index) => (
-      <React.Fragment key={index}>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Régimen</label>
-          <select
-  className="mt-1 p-2 block w-full shadow-sm border border-gray-300 rounded-md"
-  value={fiscal.Regimen}
-  onChange={(e) => {
-    const selectedRegimen = regimenesFiscales.find(regimen => regimen.descripcion === e.target.value);
-    const updatedFiscales = [...clientData.caracteristicasFiscales];
-    updatedFiscales[index].Regimen = selectedRegimen.descripcion;
-    setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
-  }}
->
-  {regimenesFiscales.map(regimen => (
-    <option key={regimen.id} value={regimen.descripcion}>{regimen.descripcion}</option>
-  ))}
-</select>
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Fecha de Alta</label>
-          <input type="date" className="mt-1 p-2 block w-full shadow-sm border border-gray-300 rounded-md" value={fiscal.FechaAlta} onChange={(e) => handleDateInputChange(e, `caracteristicasFiscales[${index}].FechaAlta`)} />
-        </div>
-      </React.Fragment>
-    ))}
-    <button 
-  className="bg-black text-white py-2 px-4 rounded w-auto" 
-  onClick={() => setClientData({
-    ...clientData,
-    caracteristicasFiscales: [...clientData.caracteristicasFiscales, { Regimen: '', FechaAlta: '' }]
-  })}
->
-  Agregar Columna
-</button>
+const FiscalTab = ({ clientData, setClientData, handleDateInputChange, handleMediaUpload, files }) => {
 
+  const handleAddFiscal = () => {
+    setClientData({
+      ...clientData,
+      caracteristicasFiscales: [...clientData.caracteristicasFiscales, { Regimen: '', FechaAlta: '' }]
+    });
+  };
 
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700">Archivos</label>
-      <button className="bg-black text-white py-2 px-4 rounded" onClick={() => document.getElementById('fileInput').click()}>Subir Archivos</button>
-<input
-  type="file"
-  id="fileInput"
-  className="hidden"
-  onChange={(e) => handleMediaUpload(e.target.files)}
-/>
-<textarea 
-  className="mt-1 p-2 block w-full shadow-sm border border-gray-300 rounded-md" 
-  value={files.map(file => `<a href="${file}" target="_blank">${file.split('/').pop()}</a>`).join('\n')} 
-  readOnly 
-/>
-    </div>
+  const handleRemoveFiscal = (index) => {
+    if (clientData.caracteristicasFiscales.length > 1) {
+      const updatedFiscales = clientData.caracteristicasFiscales.filter((_, i) => i !== index);
+      setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const fileList = e.target.files;
+    handleMediaUpload(fileList);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-8">
+      {clientData.caracteristicasFiscales.map((fiscal, index) => (
+        <React.Fragment key={index}>
+          <div className="mb-4 flex items-center">
+            <PlusCircleIcon
+              className="h-6 w-6 text-green-500 mr-2 cursor-pointer"
+              onClick={handleAddFiscal}
+            />
+            <select
+              className="mt-1 p-2 block w-full shadow-sm border border-gray-300 rounded-md"
+              value={fiscal.Regimen}
+              onChange={(e) => {
+                const selectedRegimen = regimenesFiscales.find(regimen => regimen.descripcion === e.target.value);
+                const updatedFiscales = [...clientData.caracteristicasFiscales];
+                updatedFiscales[index].Regimen = selectedRegimen.descripcion;
+                setClientData({ ...clientData, caracteristicasFiscales: updatedFiscales });
+              }}
+            >
+              {regimenesFiscales.map(regimen => (
+                <option key={regimen.id} value={regimen.descripcion}>{regimen.descripcion}</option>
+              ))}
+            </select>
+            <MinusCircleIcon
+              className={`h-6 w-6 text-red-500 ml-2 cursor-pointer ${clientData.caracteristicasFiscales.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => handleRemoveFiscal(index)}
+            />
+          </div>
+          <div className="mb-4">
+            <input type="date" className="mt-1 p-2 block w-full shadow-sm border border-gray-300 rounded-md" value={fiscal.FechaAlta} onChange={(e) => handleDateInputChange(e, `caracteristicasFiscales[${index}].FechaAlta`)} />
+          </div>
+        </React.Fragment>
+      ))}
+
+      {/* File Upload Section */}
+<div className="col-span-2 mt-4">
+  <div className="flex items-center">
+    <input
+      type="file"
+      className="hidden"
+      id="fileInput"
+      onChange={handleFileChange}
+      multiple
+    />
+    <button
+      className="bg-black text-white py-2 px-4 rounded cursor-pointer"
+      onClick={() => document.getElementById('fileInput').click()}
+    >
+      Agregar archivos
+    </button>
   </div>
-);
+  <div className="mt-4 p-4 border rounded-md bg-gray-50">
+    <h2 className="text-lg font-medium">Archivos Subidos</h2>
+    <ul className="list-disc list-inside">
+      {files.map((fileUrl, index) => (
+        <li key={index}>
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            {fileUrl.split('/').pop()} {/* Display filename */}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>
+</div>
+
+  );
+};
+
 
 export default ClientForm;

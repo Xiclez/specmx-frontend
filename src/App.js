@@ -3,10 +3,14 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import Login from './components/Login';
 import BlogList from './components/BlogList';
 import BlogEditor from './components/BlogEditor';
-import ClientEditor from './components/ClientEditor';
 
-import ClientList from './components/ClientList';
-//import ClientList from './components/ClientTable';
+//import ClientEditor from './components/ClientEditor';
+import ClientEditor from './components/ClientForm';
+
+
+
+//import ClientList from './components/ClientList';
+import ClientList from './components/ClientTable';
 
 import ClientDetails from './components/ClientDetails'; 
 import Home from './components/Home';
