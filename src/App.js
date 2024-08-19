@@ -1,68 +1,77 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import Login from './components/Login';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
+import Login from './components/Loginn';
 import BlogList from './components/BlogList';
 import BlogEditor from './components/BlogEditor';
-
-//import ClientEditor from './components/ClientEditor';
 import ClientEditor from './components/ClientForm';
-
-
-
-//import ClientList from './components/ClientList';
 import ClientList from './components/ClientTable';
-
-import ClientDetails from './components/ClientDetails'; 
 import Home from './components/Home';
 import Sidebar from './components/Sidebar';
 import Orders from './components/OrderManagement';
-import TestTable from './components/ClientTable';
-import TestClient from './components/ClientForm';
+import Topbar from './components/Topbar'; // Importa el componente Topbar
 import './App.css'; 
 
 const App = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [isAuth, setIsAuth] = useState(false);
 
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
     };
 
-    const isAuthenticated = () => {
+    const checkAuthentication = () => {
         const token = localStorage.getItem('token');
         const expiryTime = localStorage.getItem('tokenExpiry');
         if (token && expiryTime && new Date().getTime() < expiryTime) {
-            return true;
+            setIsAuth(true);
         } else {
             localStorage.removeItem('token');
             localStorage.removeItem('tokenExpiry');
-            return false;
+            setIsAuth(false);
         }
     };
-  
+
+    useEffect(() => {
+        checkAuthentication();
+    }, []);
+
     return (
         <Router>
-            {isAuthenticated() && <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} username="Usuario" />}
+            <AuthenticatedApp isAuth={isAuth} sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+        </Router>
+    );
+};
+
+const AuthenticatedApp = ({ isAuth, sidebarOpen, toggleSidebar }) => {
+    const location = useLocation();
+    const isLoginPage = location.pathname === '/login';
+
+    return (
+        <>
+            {!isLoginPage && isAuth && <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} username="Usuario" />}
             <div className={`app-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
-                {isAuthenticated() && (
-                    <button className="hamburger-icon" onClick={toggleSidebar}>
-                        &#9776; {/* Este es el ícono de hamburguesa */}
-                    </button>
+                {!isLoginPage && isAuth && (
+                    <>
+                        <Topbar /> {/* Renderizar Topbar si no es la página de login y el usuario está autenticado */}
+                        <button className="hamburger-icon" onClick={toggleSidebar}>
+                            &#9776; {/* Este es el ícono de hamburguesa */}
+                        </button>
+                    </>
                 )}
                 <Routes>
                     <Route path="/login" element={<Login />} />
-                    <Route path="/home" element={isAuthenticated() ? <Home /> : <Navigate to="/login" />} />
-                    <Route path="/test" element={isAuthenticated() ? <TestTable /> : <Navigate to="/login" />} />
-                    <Route path="/test2" element={isAuthenticated() ? <TestClient /> : <Navigate to="/login" />} />
-                    <Route path="/blog" element={isAuthenticated() ? <BlogList /> : <Navigate to="/login" />} />
-                    <Route path="/blogedit/:id?" element={isAuthenticated() ? <BlogEditor /> : <Navigate to="/login" />} />
-                    <Route path="/clients" element={isAuthenticated() ? <ClientList /> : <Navigate to="/login" />} />
-                    <Route path="/clientedit/:id?" element={isAuthenticated() ? <ClientEditor /> : <Navigate to="/login" />} />
-                    <Route path="/client/:id" element={isAuthenticated() ? <ClientDetails /> : <Navigate to="/login" />} /> 
-                    <Route path="/orders" element={isAuthenticated() ? <Orders /> : <Navigate to="/login" />} />
-                    <Route path="/" element={<Navigate to={isAuthenticated() ? "/home" : "/login"} />} />
+                    <Route path="/home" element={isAuth ? <Home /> : <Navigate to="/login" />} />
+                    <Route path="/clients" element={isAuth ? <ClientList /> : <Navigate to="/login" />} />
+                    <Route path="/client/create" element={isAuth ? <ClientEditor mode="create" /> : <Navigate to="/login" />} />
+                    <Route path="/client/edit/:id" element={isAuth ? <ClientEditor mode="edit" /> : <Navigate to="/login" />} />
+                    <Route path="/client/view/:id" element={isAuth ? <ClientEditor mode="view" /> : <Navigate to="/login" />} />
+                    <Route path="/blog" element={isAuth ? <BlogList /> : <Navigate to="/login" />} />
+                    <Route path="/blogedit/:id?" element={isAuth ? <BlogEditor /> : <Navigate to="/login" />} />
+                    <Route path="/orders" element={isAuth ? <Orders /> : <Navigate to="/login" />} />
+                    <Route path="/" element={<Navigate to={isAuth ? "/home" : "/login"} />} />
                 </Routes>
             </div>
-        </Router>
+        </>
     );
 };
 
