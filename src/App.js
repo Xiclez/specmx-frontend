@@ -1,78 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
-import Login from './components/Loginn';
-import BlogList from './components/BlogList';
-import BlogEditor from './components/BlogEditor';
-import ClientEditor from './components/ClientForm';
-import ClientList from './components/ClientTable';
-import Home from './components/Home';
-import Sidebar from './components/Sidebar';
-import Orders from './components/OrderManagement';
-import Topbar from './components/Topbar'; // Importa el componente Topbar
-import './App.css'; 
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Sidebar from './components/Sidebar'; // Asegúrate de que la ruta sea correcta
+import { Clientes } from './screens/Clientes'; 
+import { Empresas } from './screens/Empresas';
+import { Test } from './screens/Test';
+import { Test2 } from './screens/Test2';
+/*
+import { TareasTable, TareaForm } from './components/Tareas';
+import { ProyectosTable, ProyectoForm } from './components/Proyectos';
+import { FacturasTable, FacturaForm } from './components/Facturas';
+import { ServiciosTable, ServicioForm } from './components/Servicios';
+import { ColaboradoresTable, ColaboradorForm } from './components/Colaboradores';
+import { UsuariosTable, UsuarioForm } from './components/Usuarios';
+*/
 
 const App = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [isAuth, setIsAuth] = useState(false);
+  return (
+    <Router>
+      <div className="flex">
+        {/* Sidebar */}
+        <Sidebar />
 
-    const toggleSidebar = () => {
-        setSidebarOpen(!sidebarOpen);
-    };
+        {/* Main Content */}
+        <div className="flex-1 p-6 bg-gray-100">
+          <Routes>
+          <Route path="/test" element={<Test />} />
+          <Route path="/test2" element={<Test2 />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route path="/clientes/create" element={<Clientes />} />
+            <Route path="/clientes/edit/:id" element={<Clientes />} />
+            <Route path="/clientes/view/:id" element={<Clientes />} />
+           
+            <Route path="/empresas" element={<Empresas />} />
+             
+            <Route path="/empresas/create" element={<Empresas />} />
+            <Route path="/empresas/edit/:id" element={<Empresas />} />
+            <Route path="/empresas/view/:id" element={<Empresas />} />
+{/*
+            <Route path="/tareas" element={<TareasTable />} />
+            <Route path="/tareas/create" element={<TareaForm />} />
+            <Route path="/tareas/edit/:id" element={<TareaForm />} />
+            <Route path="/tareas/view/:id" element={<TareaForm />} />
 
-    const checkAuthentication = () => {
-        const token = localStorage.getItem('token');
-        const expiryTime = localStorage.getItem('tokenExpiry');
-        if (token && expiryTime && new Date().getTime() < expiryTime) {
-            setIsAuth(true);
-        } else {
-            localStorage.removeItem('token');
-            localStorage.removeItem('tokenExpiry');
-            setIsAuth(false);
-        }
-    };
+            <Route path="/proyectos" element={<ProyectosTable />} />
+            <Route path="/proyectos/create" element={<ProyectoForm />} />
+            <Route path="/proyectos/edit/:id" element={<ProyectoForm />} />
+            <Route path="/proyectos/view/:id" element={<ProyectoForm />} />
 
-    useEffect(() => {
-        checkAuthentication();
-    }, []);
+            <Route path="/facturas" element={<FacturasTable />} />
+            <Route path="/facturas/create" element={<FacturaForm />} />
+            <Route path="/facturas/edit/:id" element={<FacturaForm />} />
+            <Route path="/facturas/view/:id" element={<FacturaForm />} />
 
-    return (
-        <Router>
-            <AuthenticatedApp isAuth={isAuth} sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-        </Router>
-    );
-};
+            <Route path="/servicios" element={<ServiciosTable />} />
+            <Route path="/servicios/create" element={<ServicioForm />} />
+            <Route path="/servicios/edit/:id" element={<ServicioForm />} />
+            <Route path="/servicios/view/:id" element={<ServicioForm />} />
 
-const AuthenticatedApp = ({ isAuth, sidebarOpen, toggleSidebar }) => {
-    const location = useLocation();
-    const isLoginPage = location.pathname === '/login';
+            <Route path="/colaboradores" element={<ColaboradoresTable />} />
+            <Route path="/colaboradores/create" element={<ColaboradorForm />} />
+            <Route path="/colaboradores/edit/:id" element={<ColaboradorForm />} />
+            <Route path="/colaboradores/view/:id" element={<ColaboradorForm />} />
 
-    return (
-        <>
-            {!isLoginPage && isAuth && <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} username="Usuario" />}
-            <div className={`app-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
-                {!isLoginPage && isAuth && (
-                    <>
-                        <Topbar /> {/* Renderizar Topbar si no es la página de login y el usuario está autenticado */}
-                        <button className="hamburger-icon" onClick={toggleSidebar}>
-                            &#9776; {/* Este es el ícono de hamburguesa */}
-                        </button>
-                    </>
-                )}
-                <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/home" element={isAuth ? <Home /> : <Navigate to="/login" />} />
-                    <Route path="/clients" element={isAuth ? <ClientList /> : <Navigate to="/login" />} />
-                    <Route path="/client/create" element={isAuth ? <ClientEditor mode="create" /> : <Navigate to="/login" />} />
-                    <Route path="/client/edit/:id" element={isAuth ? <ClientEditor mode="edit" /> : <Navigate to="/login" />} />
-                    <Route path="/client/view/:id" element={isAuth ? <ClientEditor mode="view" /> : <Navigate to="/login" />} />
-                    <Route path="/blog" element={isAuth ? <BlogList /> : <Navigate to="/login" />} />
-                    <Route path="/blogedit/:id?" element={isAuth ? <BlogEditor /> : <Navigate to="/login" />} />
-                    <Route path="/orders" element={isAuth ? <Orders /> : <Navigate to="/login" />} />
-                    <Route path="/" element={<Navigate to={isAuth ? "/home" : "/login"} />} />
-                </Routes>
-            </div>
-        </>
-    );
+            <Route path="/usuarios" element={<UsuariosTable />} />
+            <Route path="/usuarios/create" element={<UsuarioForm />} />
+            <Route path="/usuarios/edit/:id" element={<UsuarioForm />} />
+            <Route path="/usuarios/view/:id" element={<UsuarioForm />} />
+
+             Añade más rutas aquí si es necesario */}
+          </Routes>
+        </div>
+      </div>
+    </Router>
+  );
 };
 
 export default App;
