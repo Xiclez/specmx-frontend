@@ -1,38 +1,22 @@
 import React from 'react';
-import TableComponent from './TableComponent';
-import FormComponent from './FormComponent';
+import TablaDinamica from '../components/Tabla';
 
-export const ServiciosTable = () => {
-  const columns = [
-    { Header: 'Nombre', accessor: 'nombre' },
-    { Header: 'Descripción', accessor: 'descripcion' },
-    { Header: 'Precio', accessor: 'precio' },
-  ];
+export const Servicios = () => {
+  const getEndpoint = 'http://localhost:3010/api/servicio/getServicios';
+  const createEndpoint = 'http://localhost:3010/api/servcio/createServicio';
+  const updateEndpoint = 'http://localhost:3010/api/servicio/updateServicio';  // sin el ':id' porque se agregará dinámicamente
+  const deleteEndpoint = 'http://localhost:3010/api/servicio/deleteServicio';  // sin el 'id' porque se agregará dinámicamente
 
   return (
-    <TableComponent
-      resource="servicios"
-      columns={columns}
-      fetchUrl="http://localhost:3010/api/servicio/getServicios"
-      deleteUrl="http://localhost:3010/api/servicio/deleteServicio"
-    />
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Datos de la API</h1>
+      <TablaDinamica
+        getEndpoint={getEndpoint}
+        createEndpoint={createEndpoint}
+        updateEndpoint={updateEndpoint}
+        deleteEndpoint={deleteEndpoint}
+      />
+    </div>
   );
 };
 
-export const ServicioForm = () => {
-  const fields = [
-    { label: 'Nombre', name: 'nombre', required: true },
-    { label: 'Descripción', name: 'descripcion', required: true },
-    { label: 'Precio', name: 'precio', type: 'number', required: true },
-  ];
-
-  return (
-    <FormComponent
-      resource="servicios"
-      fields={fields}
-      fetchUrl="http://localhost:3010/api/servicio/getServicio"
-      createUrl="http://localhost:3010/api/servicio/createServicio"
-      updateUrl="http://localhost:3010/api/servicio/updateServicio"
-    />
-  );
-};

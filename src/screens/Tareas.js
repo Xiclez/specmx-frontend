@@ -1,38 +1,22 @@
 import React from 'react';
-import TableComponent from './TableComponent';
-import FormComponent from './FormComponent';
+import TablaDinamica from '../components/Tabla';
 
-export const TareasTable = () => {
-  const columns = [
-    { Header: 'Título', accessor: 'titulo' },
-    { Header: 'Descripción', accessor: 'descripcion' },
-    { Header: 'Fecha de Entrega', accessor: 'fechaEntrega' },
-  ];
+export const Tareas = () => {
+  const getEndpoint = 'http://localhost:3010/api/tarea/getTareas';
+  const createEndpoint = 'http://localhost:3010/api/tarea/createTarea';
+  const updateEndpoint = 'http://localhost:3010/api/tarea/updateTarea';  // sin el ':id' porque se agregará dinámicamente
+  const deleteEndpoint = 'http://localhost:3010/api/tarea/deleteTarea';  // sin el 'id' porque se agregará dinámicamente
 
   return (
-    <TableComponent
-      resource="tareas"
-      columns={columns}
-      fetchUrl="http://localhost:3010/api/tarea/getTareas"
-      deleteUrl="http://localhost:3010/api/tarea/deleteTarea"
-    />
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Datos de la API</h1>
+      <TablaDinamica
+        getEndpoint={getEndpoint}
+        createEndpoint={createEndpoint}
+        updateEndpoint={updateEndpoint}
+        deleteEndpoint={deleteEndpoint}
+      />
+    </div>
   );
 };
 
-export const TareaForm = () => {
-  const fields = [
-    { label: 'Título', name: 'titulo', required: true },
-    { label: 'Descripción', name: 'descripcion', required: true },
-    { label: 'Fecha de Entrega', name: 'fechaEntrega', type: 'date', required: true },
-  ];
-
-  return (
-    <FormComponent
-      resource="tareas"
-      fields={fields}
-      fetchUrl="http://localhost:3010/api/tarea/getTarea"
-      createUrl="http://localhost:3010/api/tarea/createTarea"
-      updateUrl="http://localhost:3010/api/tarea/updateTarea"
-    />
-  );
-};

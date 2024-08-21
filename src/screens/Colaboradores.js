@@ -1,38 +1,22 @@
 import React from 'react';
-import TableComponent from './TableComponent';
-import FormComponent from './FormComponent';
+import TablaDinamica from '../components/Tabla';
 
-export const ColaboradoresTable = () => {
-  const columns = [
-    { Header: 'Nombre', accessor: 'nombre' },
-    { Header: 'Email', accessor: 'email' },
-    { Header: 'Teléfono', accessor: 'telefono' },
-  ];
+export const Colaboradores = () => {
+  const getEndpoint = 'http://localhost:3010/api/colaborador/getColaboradores';
+  const createEndpoint = 'http://localhost:3010/api/colaborador/createColaborador';
+  const updateEndpoint = 'http://localhost:3010/api/colaborador/updateColaborador';  // sin el ':id' porque se agregará dinámicamente
+  const deleteEndpoint = 'http://localhost:3010/api/colaborador/deleteColaborador';  // sin el 'id' porque se agregará dinámicamente
 
   return (
-    <TableComponent
-      resource="colaboradores"
-      columns={columns}
-      fetchUrl="http://localhost:3010/api/colaborador/getColaboradores"
-      deleteUrl="http://localhost:3010/api/colaborador/deleteColaborador"
-    />
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Datos de la API</h1>
+      <TablaDinamica
+        getEndpoint={getEndpoint}
+        createEndpoint={createEndpoint}
+        updateEndpoint={updateEndpoint}
+        deleteEndpoint={deleteEndpoint}
+      />
+    </div>
   );
 };
 
-export const ColaboradorForm = () => {
-  const fields = [
-    { label: 'Nombre', name: 'nombre', required: true },
-    { label: 'Email', name: 'email', type: 'email', required: true },
-    { label: 'Teléfono', name: 'telefono', required: true },
-  ];
-
-  return (
-    <FormComponent
-      resource="colaboradores"
-      fields={fields}
-      fetchUrl="http://localhost:3010/api/colaborador/getColaborador"
-      createUrl="http://localhost:3010/api/colaborador/createColaborador"
-      updateUrl="http://localhost:3010/api/colaborador/updateColaborador"
-    />
-  );
-};

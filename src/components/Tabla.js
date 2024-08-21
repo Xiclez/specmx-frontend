@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaChevronDown } from 'react-icons/fa';
+import CsfUploader from './CsfUploader';
 
-const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint }) => {
+const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, handleFileUpload }) => {
   const [data, setData] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -13,6 +15,9 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [formData, setFormData] = useState({});
+  const [isCSFMode, setIsCSFMode] = useState(false);
+  const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
+
 
   const excludedFields = ['_id', 'createdAt', 'updatedAt', '__v'];
 
@@ -90,13 +95,19 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = (fromCSF = false) => {
     setIsCreateMode(true);
     setIsEditMode(true); 
     setIsModalOpen(true);
     setExpandedRow(null); 
     setSelectedField(null);
-    setFormData({});  
+    setFormData({});
+    if (fromCSF) {
+      setIsCSFMode(true); // Activa el modo CSF si se selecciona "Crear a partir de CSF"
+    } else {
+      setIsCSFMode(false); // Desactiva el modo CSF si se selecciona "Crear"
+    }
+    
   };
 
   const handleDelete = async () => {
@@ -128,6 +139,15 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     });
   };
 
+  const handleUploadComplete = (data) => {
+    // Mapea automáticamente los datos recibidos desde CSF al formData
+    setFormData((prevData) => ({
+      ...prevData,
+      ...data,
+    }));
+    setIsCSFMode(false);
+  };
+
   const renderCell = (value, header, index) => {
     if (Array.isArray(value)) {
       return (
@@ -151,30 +171,110 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
   };
 
   const renderFormField = (field, value = '') => {
-    if (Array.isArray(value)) {
+    if (field === 'profilePhoto') {
       return (
-        <div key={field} className="space-y-4 col-span-1">
-          <h4 className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</h4>
-          {value.map((item, index) => (
-            <div key={index} className="space-y-2 pl-4 border-l-2 border-gray-200">
-              <h5 className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Elemento {index + 1}</h5>
-              {Object.keys(item).map((subKey) => (
-                <div key={subKey} className="flex flex-col">
-                  <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{subKey}</label>
-                  <input
-                    type="text"
-                    value={item[subKey]}
-                    readOnly={!isEditMode && !isCreateMode}
-                    className="p-2 border border-gray-300 rounded text-sm"
-                    style={{ minWidth: '0', width: 'auto', maxWidth: '100%' }}
-                    onChange={(e) => handleInputChange(`${field}[${index}].${subKey}`, e.target.value)}
-                  />
-                </div>
-              ))}
-            </div>
-          ))}
+        <div key={field} className="flex flex-col col-span-1">
+          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</label>
+          {value ? (
+            <img src={value} alt="Vista previa" className="w-32 h-32 object-cover rounded-md" />
+          ) : (
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleFileUpload(field, e.target.files[0])}
+              className="p-2 border border-gray-300 rounded text-sm"
+            />
+          )}
         </div>
       );
+    } else if (field === 'files') {
+      return (
+        <div key={field} className="flex flex-col col-span-1">
+          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</label>
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => handleFileUpload(field, e.target.files[0])}
+            className="p-2 border border-gray-300 rounded text-sm"
+          />
+          <div className="mt-2 space-y-2">
+            {value && value.map((fileUrl, index) => {
+              const isImage = fileUrl.match(/\.(jpeg|jpg|gif|png)$/) !== null;
+              const isPDF = fileUrl.match(/\.pdf$/) !== null;
+  
+              if (isImage) {
+                return (
+                  <img
+                    key={index}
+                    src={fileUrl}
+                    alt={`Vista previa ${index + 1}`}
+                    className="w-full h-auto object-contain rounded-md"
+                  />
+                );
+              } else if (isPDF) {
+                return (
+                  <embed
+                    key={index}
+                    src={fileUrl}
+                    type="application/pdf"
+                    className="w-full h-64"
+                    alt={`Vista previa PDF ${index + 1}`}
+                  />
+                );
+              }
+              return null;
+            })}
+          </div>
+        </div>
+      );
+    } else if (Array.isArray(value)) {
+      // Comprobamos si el array contiene strings en lugar de objetos
+      if (typeof value[0] === 'string') {
+        return (
+          <div key={field} className="space-y-4 col-span-1">
+            <h4 className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</h4>
+            {value.map((item, index) => (
+              <div key={index} className="flex flex-col">
+                <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">
+                  Elemento {index + 1}
+                </label>
+                <input
+                  type="text"
+                  value={item}
+                  readOnly={!isEditMode && !isCreateMode}
+                  className="p-2 border border-gray-300 rounded text-sm"
+                  style={{ minWidth: '0', width: 'auto', maxWidth: '100%' }}
+                  onChange={(e) => handleInputChange(`${field}[${index}]`, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      } else {
+        return (
+          <div key={field} className="space-y-4 col-span-1">
+            <h4 className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</h4>
+            {value.map((item, index) => (
+              <div key={index} className="space-y-2 pl-4 border-l-2 border-gray-200">
+                <h5 className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Elemento {index + 1}</h5>
+                {Object.keys(item).map((subKey) => (
+                  <div key={subKey} className="flex flex-col">
+                    <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{subKey}</label>
+                    <input
+                      type="text"
+                      value={item[subKey]}
+                      readOnly={!isEditMode && !isCreateMode}
+                      className="p-2 border border-gray-300 rounded text-sm"
+                      style={{ minWidth: '0', width: 'auto', maxWidth: '100%' }}
+                      onChange={(e) => handleInputChange(`${field}[${index}].${subKey}`, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      }
     } else if (typeof value === 'object' && value !== null) {
       return (
         <div key={field} className="flex flex-col col-span-1">
@@ -195,7 +295,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
           <input
             type="text"
             value={value}
-            readOnly={!isEditMode && !isCreateMode} // Hacer los campos editables en modo de creación
+            readOnly={!isEditMode && !isCreateMode}
             className="p-2 border border-gray-300 rounded text-sm"
             style={{ minWidth: '0', width: 'auto', maxWidth: '100%' }}
             onChange={(e) => handleInputChange(field, e.target.value)}
@@ -204,18 +304,18 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
       );
     }
   };
-
-  const renderForm = (item = {}) => {
+  
+  const renderForm = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {headers.map((header) => renderFormField(header, formData[header]))} {/* Corregido para manejar formData en modo creación */}
+        {headers.map((header) => renderFormField(header, formData[header]))}
       </div>
     );
   };
 
   return (
     <div className="container mx-auto p-4 bg-gray-100 h-screen flex flex-col">
-      {/* Toolbar directly in the table */}
+      {/* Toolbar */}
       <div className="flex items-center space-x-4 mb-4">
         <input
           type="text"
@@ -248,12 +348,32 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
           )}
         </div>
 
-        <button
-          onClick={handleCreate}
-          className="p-2 bg-yellow-500 text-white rounded"
-        >
-          Crear
-        </button>
+        <div className="relative">
+  <button
+    onClick={() => setIsCreateDropdownOpen(!isCreateDropdownOpen)}
+    className="p-2 bg-yellow-500 text-white rounded inline-flex items-center"
+  >
+    Crear
+    <FaChevronDown className="ml-2" />
+  </button>
+  {isCreateDropdownOpen && (
+    <div className="absolute mt-2 w-48 bg-white border border-gray-300 rounded shadow-lg z-10">
+      <button
+        onClick={() => handleCreate(false)}
+        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+      >
+        Crear
+      </button>
+      <button
+        onClick={() => handleCreate(true)}
+        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+      >
+        Crear a partir de CSF
+      </button>
+    </div>
+  )}
+</div>
+
       </div>
       
       {/* Table */}
@@ -344,7 +464,12 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
               <h3 className="text-lg font-bold mb-4">
                 {isCreateMode ? 'Crear Nuevo Registro' : 'Detalles del Elemento Seleccionado'}
               </h3>
-              {renderForm(formData)} {/* Usando formData para asegurar que los campos estén editables */}
+              {isCSFMode && (
+  <div className="mb-4">
+    <CsfUploader onUploadComplete={handleUploadComplete} />
+  </div>
+)}
+              {renderForm()} {/* Usando formData para asegurar que los campos estén editables */}
             </div>
           </div>
         </div>

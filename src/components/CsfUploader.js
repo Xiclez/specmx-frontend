@@ -67,17 +67,19 @@ const CsfUploader = ({ onUploadComplete }) => {
                 data = response.data;
 
                 // Verificar si los campos están completos
-                if (!data.datosIdentificacion || Object.keys(data.datosIdentificacion).length === 0 ||
-                    !data.datosUbicacion || Object.keys(data.datosUbicacion).length === 0 ||
-                    !data.caracteristicasFiscales || data.caracteristicasFiscales.length === 0) {
-                    setError('Incomplete data received, retrying...');
+                if (
+                    (!data.Nombre && !data.ApellidoPaterno && !data.EntidadFederativa) && // Si estos están vacíos, verificar los siguientes
+                    (!data.DenominacionRazonSocial || !data.RegimenCapital || !data.FechaConstitucion) || // Si también están vacíos, es un error
+                    !data.MunicipioDelegacion || !data.Colonia || !data.NombreVialidad || 
+                    !data.NumeroExterior || !data.CP || !data.RFC
+                ) {
+                    setError('Datos incompletos recibidos, reintentando...');
                 } else {
                     complete = true;
                     setError(null);
                     onUploadComplete(data);
                 }
-
-            }
+            }      
         } catch (error) {
             setError('Error scanning PDF: ' + error.message);
         } finally {
