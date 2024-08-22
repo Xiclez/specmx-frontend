@@ -1,5 +1,5 @@
 import React from 'react';
-import TablaDinamica from '../components/Tabla';
+import Tabla from '../components/Tabla';
 import Topbar from '../components/Topbar';
 
 export const Clientes = () => {
@@ -11,7 +11,7 @@ export const Clientes = () => {
   return (
     <div className="container mx-auto p-4">
 <Topbar breadcrumbs={["Clientes"]} />
-<TablaDinamica
+<Tabla
         getEndpoint={getEndpoint}
         createEndpoint={createEndpoint}
         updateEndpoint={updateEndpoint}

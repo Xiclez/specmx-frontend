@@ -213,28 +213,36 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
 
   const renderFormField = (field, value = '') => {
     if (field.endsWith('Id')) {
-      // Configuración del endpoint según el campo
-      let endpoint;
-      if (field === 'empresaId') {
-        endpoint = 'http://localhost:3010/api/empresa/getEmpresas';
-      } else {
-        endpoint = `http://localhost:3010/api/${field.replace('Id', '').toLowerCase()}/get${field.replace('Id', '').charAt(0).toUpperCase()}${field.replace('Id', '').slice(1)}s`;
-      }
-
+      let recurso = field.replace('Id', '').toLowerCase();
+      let endpoint = `http://localhost:3010/api/${recurso}/get${recurso.charAt(0).toUpperCase()}${recurso.slice(1)}s`;
+  
       return (
         <div key={field} className="flex flex-col col-span-1">
-          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{`Buscar ${field.replace('Id', '')}`}</label>
-          <SearchBar
-            endpoint={endpoint}
-            onSelect={(id) => handleInputChange(field, id)}
-          />
+          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">
+            {field.replace('Id', '')}
+          </label>
+          {!isEditMode && !isCreateMode ? (
+            <span>
+              {/* Assuming `value` is an object and making a request to fetch its data */}
+              {value?._id ? (
+                <span>{value?.name || value?.Nombre || value?.nombre || "N/A"}</span>
+              ) : (
+                "N/A"
+              )}
+            </span>
+          ) : (
+            <SearchBar
+              endpoint={endpoint}
+              onSelect={(selectedId) => handleInputChange(field, selectedId)}
+            />
+          )}
         </div>
       );
     } else if (field === 'profilePhoto') {
       return (
         <div key={field} className="flex flex-col col-span-1">
           <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Foto de Perfil</label>
-          {value ? (
+          {typeof value === 'string' && value ? (
             <img src={value} alt="Foto de Perfil" className="w-32 h-32 object-cover rounded-md" />
           ) : (
             <div className="w-32 h-32 flex items-center justify-center bg-gray-200 rounded-md">
@@ -349,13 +357,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
       return (
         <div key={field} className="flex flex-col col-span-1">
           <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</label>
-          <ul className="list-disc list-inside">
-            {Object.entries(value).map(([key, val]) => (
-              <li key={key}>
-                {key}: {val}
-              </li>
-            ))}
-          </ul>
+          <span>{value?.name || value?.Nombre || value?.nombre || "N/A"}</span>
         </div>
       );
     } else {
@@ -374,6 +376,8 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
       );
     }
   };
+  
+  
 
   const renderForm = () => {
     return (

@@ -5,14 +5,12 @@ const SearchBar = ({ endpoint, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [options, setOptions] = useState([]);
   const [filteredOptions, setFilteredOptions] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
         const response = await axios.get(endpoint);
         setOptions(response.data);
-        setFilteredOptions(response.data);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -23,19 +21,41 @@ const SearchBar = ({ endpoint, onSelect }) => {
 
   const handleSearch = (term) => {
     setSearchTerm(term);
-    setIsDropdownOpen(true);
+    if (term.trim() === '') {
+      setFilteredOptions([]);
+      return;
+    }
 
     const filtered = options.filter(option =>
       Object.values(option).some(value =>
         String(value).toLowerCase().includes(term.toLowerCase())
       )
     );
+
     setFilteredOptions(filtered);
   };
 
   const handleSelect = (id) => {
     onSelect(id);
-    setIsDropdownOpen(false);
+    setSearchTerm('');
+    setFilteredOptions([]);
+  };
+
+  const renderOptionLabel = (option) => {
+    if (endpoint.includes('cliente')) {
+      return `${option.Nombre} ${option.ApellidoPaterno}`;
+    } else if (endpoint.includes('empresa')) {
+      return `${option.DenominacionRazonSocial}`;
+    } else if (endpoint.includes('proyecto') || endpoint.includes('tarea')) {
+      return `${option.nombre} (${option.fechaInicio})`;
+    } else if (endpoint.includes('servicio')) {
+      return `${option.nombre} (${option.createdAt.split('T')[0]})`;
+    } else if (endpoint.includes('factura') || endpoint.includes('colaborador')) {
+      return `${option.nombre} ${option.apellido}`;
+    } else if (endpoint.includes('usuario')) {
+      return `${option.email}`;
+    }
+    return 'No match';
   };
 
   return (
@@ -46,20 +66,19 @@ const SearchBar = ({ endpoint, onSelect }) => {
         onChange={(e) => handleSearch(e.target.value)}
         placeholder="Buscar..."
         className="p-2 border border-gray-300 rounded text-sm mb-2"
-        onFocus={() => setIsDropdownOpen(true)}
       />
-      {isDropdownOpen && filteredOptions.length > 0 && (
-        <ul className="absolute top-full left-0 w-full bg-white border border-gray-300 rounded shadow-lg z-10 max-h-40 overflow-y-auto">
+      {filteredOptions.length > 0 && (
+        <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg z-10">
           {filteredOptions.map((option) => (
-            <li
+            <div
               key={option._id}
               onClick={() => handleSelect(option._id)}
-              className="p-2 hover:bg-gray-100 cursor-pointer"
+              className="cursor-pointer p-2 hover:bg-gray-200"
             >
-              {Object.values(option).join(' - ')}
-            </li>
+              {renderOptionLabel(option)}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
