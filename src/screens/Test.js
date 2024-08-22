@@ -1,6 +1,7 @@
 import React from 'react';
 import TablaDinamica from '../components/Tabla';
 
+
 export const Test = () => {
   const getEndpoint = 'http://localhost:3010/api/cliente/getClientes';
   const createEndpoint = 'http://localhost:3010/api/cliente/createCliente';

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaChevronDown } from 'react-icons/fa';
+import SearchBar from './SearchBar';
 import CsfUploader from './CsfUploader';
 
-const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, handleFileUpload }) => {
+const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint }) => {
   const [data, setData] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -16,8 +16,6 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [isCSFMode, setIsCSFMode] = useState(false);
-  const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
-
 
   const excludedFields = ['_id', 'createdAt', 'updatedAt', '__v'];
 
@@ -31,7 +29,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
           (header) => !excludedFields.includes(header)
         );
         setHeaders(headers);
-        setVisibleHeaders(headers); 
+        setVisibleHeaders(headers);
         setFilteredData(data);
       }
 
@@ -65,7 +63,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     setIsModalOpen(true);
     setSelectedField(null);
     setIsEditMode(false);
-    setFormData(filteredData[index]); 
+    setFormData(filteredData[index]);
   };
 
   const handleFieldClick = (index, field) => {
@@ -88,8 +86,8 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
       setIsModalOpen(false);
       setIsEditMode(false);
       setIsCreateMode(false);
-      setFormData({}); 
-      fetchData();  
+      setFormData({});
+      fetchData();
     } catch (error) {
       console.error('Error al guardar los datos:', error);
     }
@@ -97,9 +95,9 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
 
   const handleCreate = (fromCSF = false) => {
     setIsCreateMode(true);
-    setIsEditMode(true); 
+    setIsEditMode(true);
     setIsModalOpen(true);
-    setExpandedRow(null); 
+    setExpandedRow(null);
     setSelectedField(null);
     setFormData({});
     if (fromCSF) {
@@ -107,7 +105,6 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     } else {
       setIsCSFMode(false); // Desactiva el modo CSF si se selecciona "Crear"
     }
-    
   };
 
   const handleDelete = async () => {
@@ -118,7 +115,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
         setExpandedRow(null);
         setIsEditMode(false);
         setIsModalOpen(false);
-        fetchData();  
+        fetchData();
       }
     } catch (error) {
       console.error('Error al eliminar el registro:', error);
@@ -148,87 +145,160 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     setIsCSFMode(false);
   };
 
-  const renderCell = (value, header, index) => {
-    if (Array.isArray(value)) {
-      return (
-        <button
-          onClick={() => handleFieldClick(index, header)}
-          className="text-blue-500 hover:underline"
-        >
-          Ver Detalles
-        </button>
-      );
-    } else if (typeof value === 'object' && value !== null) {
-      return (
-        <ul className="list-disc list-inside">
-          {Object.entries(value).map(([key, val]) => (
-            <li key={key}>{`${key}: ${val}`}</li>
-          ))}
-        </ul>
-      );
+  const handleFileUpload = async (field, files) => {
+    if (!files || files.length === 0) return;
+
+    const formData = new FormData();
+    formData.append(field === 'profilePhoto' ? 'image' : 'file', files[0]);
+
+    try {
+      // Hacer la solicitud al servidor para subir el archivo
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/helper/uploadFile`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Obtener la URL del archivo subido desde la respuesta
+      const uploadedUrl = response.data.url;
+
+      // Actualizar el estado con la nueva URL
+      setFormData((prevData) => ({
+        ...prevData,
+        [field]: field === 'files' ? [...(prevData[field] || []), uploadedUrl] : uploadedUrl,
+      }));
+    } catch (error) {
+      console.error('Error al subir el archivo:', error);
     }
-    return value;
+  };
+
+  const handleFileClick = (fileUrl) => {
+    const options = [];
+
+    // Opción para ver el archivo
+    options.push({
+      label: 'Ver',
+      action: () => {
+        window.open(fileUrl, '_blank');
+      }
+    });
+
+    // Opción para eliminar el archivo (solo en modo edición o creación)
+    if (isEditMode || isCreateMode) {
+      options.push({
+        label: 'Eliminar',
+        action: () => {
+          setFormData((prevData) => ({
+            ...prevData,
+            files: prevData.files.filter((file) => file !== fileUrl),
+          }));
+        }
+      });
+    }
+
+    // Mostrar un menú contextual o algún otro tipo de interfaz para mostrar estas opciones
+    // Por simplicidad, usaré `window.prompt` pero puedes usar un menú más sofisticado según tus necesidades
+
+    const selectedOption = window.prompt(
+      `Opciones para el archivo:\n1. ${options[0].label}${options[1] ? `\n2. ${options[1].label}` : ''}`,
+      '1'
+    );
+
+    if (selectedOption === '1') {
+      options[0].action();
+    } else if (selectedOption === '2' && options[1]) {
+      options[1].action();
+    }
   };
 
   const renderFormField = (field, value = '') => {
-    if (field === 'profilePhoto') {
+    if (field.endsWith('Id')) {
+      // Configuración del endpoint según el campo
+      let endpoint;
+      if (field === 'empresaId') {
+        endpoint = 'http://localhost:3010/api/empresa/getEmpresas';
+      } else {
+        endpoint = `http://localhost:3010/api/${field.replace('Id', '').toLowerCase()}/get${field.replace('Id', '').charAt(0).toUpperCase()}${field.replace('Id', '').slice(1)}s`;
+      }
+
       return (
         <div key={field} className="flex flex-col col-span-1">
-          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</label>
+          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{`Buscar ${field.replace('Id', '')}`}</label>
+          <SearchBar
+            endpoint={endpoint}
+            onSelect={(id) => handleInputChange(field, id)}
+          />
+        </div>
+      );
+    } else if (field === 'profilePhoto') {
+      return (
+        <div key={field} className="flex flex-col col-span-1">
+          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Foto de Perfil</label>
           {value ? (
-            <img src={value} alt="Vista previa" className="w-32 h-32 object-cover rounded-md" />
+            <img src={value} alt="Foto de Perfil" className="w-32 h-32 object-cover rounded-md" />
           ) : (
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleFileUpload(field, e.target.files[0])}
-              className="p-2 border border-gray-300 rounded text-sm"
-            />
+            <div className="w-32 h-32 flex items-center justify-center bg-gray-200 rounded-md">
+              <span className="text-gray-500">No hay foto</span>
+            </div>
+          )}
+          {(isEditMode || isCreateMode) && (
+            <div className="mt-2">
+              <input
+                id="profilePhotoUpload"
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileUpload(field, e.target.files)}
+                className="hidden"
+              />
+              <label
+                htmlFor="profilePhotoUpload"
+                className="mt-2 p-2 bg-blue-500 text-white rounded cursor-pointer inline-block"
+              >
+                Subir
+              </label>
+            </div>
           )}
         </div>
       );
     } else if (field === 'files') {
       return (
         <div key={field} className="flex flex-col col-span-1">
-          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">{field}</label>
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={(e) => handleFileUpload(field, e.target.files[0])}
-            className="p-2 border border-gray-300 rounded text-sm"
-          />
-          <div className="mt-2 space-y-2">
-            {value && value.map((fileUrl, index) => {
-              const isImage = fileUrl.match(/\.(jpeg|jpg|gif|png)$/) !== null;
-              const isPDF = fileUrl.match(/\.pdf$/) !== null;
-  
-              if (isImage) {
-                return (
-                  <img
-                    key={index}
-                    src={fileUrl}
-                    alt={`Vista previa ${index + 1}`}
-                    className="w-full h-auto object-contain rounded-md"
-                  />
-                );
-              } else if (isPDF) {
-                return (
-                  <embed
-                    key={index}
-                    src={fileUrl}
-                    type="application/pdf"
-                    className="w-full h-64"
-                    alt={`Vista previa PDF ${index + 1}`}
-                  />
-                );
-              }
-              return null;
-            })}
-          </div>
+          <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Archivos</label>
+          {Array.isArray(value) && value.length > 0 ? (
+            value.map((fileUrl, index) => (
+              <div key={index} className="mt-2 flex items-center">
+                <span className="text-sm text-gray-500">{fileUrl.split('/').pop()}</span>
+                <button
+                  onClick={() => handleFileClick(fileUrl)}
+                  className="ml-2 p-1 bg-gray-200 text-gray-700 rounded"
+                >
+                  &#x22EE;
+                </button>
+              </div>
+            ))
+          ) : (
+            <span className="text-gray-500">No hay archivos</span>
+          )}
+          {(isEditMode || isCreateMode) && (
+            <div className="mt-2">
+              <input
+                id="fileUpload"
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => handleFileUpload(field, e.target.files)}
+                className="hidden"
+              />
+              <label
+                htmlFor="fileUpload"
+                className="p-2 bg-blue-500 text-white rounded cursor-pointer inline-block"
+              >
+                Subir
+              </label>
+            </div>
+          )}
         </div>
       );
     } else if (Array.isArray(value)) {
-      // Comprobamos si el array contiene strings en lugar de objetos
       if (typeof value[0] === 'string') {
         return (
           <div key={field} className="space-y-4 col-span-1">
@@ -304,13 +374,35 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
       );
     }
   };
-  
+
   const renderForm = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {headers.map((header) => renderFormField(header, formData[header]))}
       </div>
     );
+  };
+
+  const renderCell = (value, header, index) => {
+    if (Array.isArray(value)) {
+      return (
+        <button
+          onClick={() => handleFieldClick(index, header)}
+          className="text-blue-500 hover:underline"
+        >
+          Ver Detalles
+        </button>
+      );
+    } else if (typeof value === 'object' && value !== null) {
+      return (
+        <ul className="list-disc list-inside">
+          {Object.entries(value).map(([key, val]) => (
+            <li key={key}>{`${key}: ${val}`}</li>
+          ))}
+        </ul>
+      );
+    }
+    return value;
   };
 
   return (
@@ -323,7 +415,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
           onChange={(e) => handleSearch(e.target.value)}
           className="p-2 border border-gray-300 rounded"
         />
-        
+
         <div className="relative">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -349,33 +441,15 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
         </div>
 
         <div className="relative">
-  <button
-    onClick={() => setIsCreateDropdownOpen(!isCreateDropdownOpen)}
-    className="p-2 bg-yellow-500 text-white rounded inline-flex items-center"
-  >
-    Crear
-    <FaChevronDown className="ml-2" />
-  </button>
-  {isCreateDropdownOpen && (
-    <div className="absolute mt-2 w-48 bg-white border border-gray-300 rounded shadow-lg z-10">
-      <button
-        onClick={() => handleCreate(false)}
-        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
-      >
-        Crear
-      </button>
-      <button
-        onClick={() => handleCreate(true)}
-        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
-      >
-        Crear a partir de CSF
-      </button>
-    </div>
-  )}
-</div>
-
+          <button
+            onClick={() => handleCreate(true)}
+            className="p-2 bg-yellow-500 rounded"
+          >
+            Crear
+          </button>
+        </div>
       </div>
-      
+
       {/* Table */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto bg-white shadow-md rounded-md">
@@ -465,10 +539,10 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
                 {isCreateMode ? 'Crear Nuevo Registro' : 'Detalles del Elemento Seleccionado'}
               </h3>
               {isCSFMode && (
-  <div className="mb-4">
-    <CsfUploader onUploadComplete={handleUploadComplete} />
-  </div>
-)}
+                <div className="mb-4">
+                  <CsfUploader onUploadComplete={handleUploadComplete} />
+                </div>
+              )}
               {renderForm()} {/* Usando formData para asegurar que los campos estén editables */}
             </div>
           </div>

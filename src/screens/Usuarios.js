@@ -1,5 +1,6 @@
 import React from 'react';
 import TablaDinamica from '../components/Tabla';
+import Topbar from '../components/Topbar';
 
 export const Usuarios = () => {
   const getEndpoint = 'http://localhost:3010/api/usuario/getUsuarios';
@@ -9,7 +10,7 @@ export const Usuarios = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Datos de la API</h1>
+      <Topbar breadcrumbs={["Usuarios"]} />
       <TablaDinamica
         getEndpoint={getEndpoint}
         createEndpoint={createEndpoint}

@@ -1,5 +1,7 @@
 import React from 'react';
 import TablaDinamica from '../components/Tabla';
+import Topbar from '../components/Topbar';
+
 
 export const Proyectos = () => {
   const getEndpoint = 'http://localhost:3010/api/proyecto/getProyectos';
@@ -9,7 +11,7 @@ export const Proyectos = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Datos de la API</h1>
+      <Topbar breadcrumbs={["Proyectos"]} />
       <TablaDinamica
         getEndpoint={getEndpoint}
         createEndpoint={createEndpoint}

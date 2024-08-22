@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Cambia useHistory por useNavigate
 import { FaChevronDown } from 'react-icons/fa';
+import specmxlogo from '../assets/SPECMX2.png';
 
 const Topbar = ({ breadcrumbs, userName, userPhoto }) => {
   const navigate = useNavigate(); // Cambia useHistory por useNavigate
@@ -18,7 +19,7 @@ const Topbar = ({ breadcrumbs, userName, userPhoto }) => {
     <div className="flex items-center justify-between p-4 bg-gray-800 text-white">
       {/* Logo */}
       <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
-        <img src="/path-to-logo.png" alt="Logo" className="h-8 mr-4" />
+        <img src={specmxlogo} alt="SPECMX" className="h-8 mr-4" />
       </div>
 
       {/* Breadcrumbs */}
