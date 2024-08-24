@@ -61,7 +61,7 @@ const CsfUploader = ({ onUploadComplete }) => {
 
             while (!complete) {
                 const pdfUrl = await extractQrCodeUrl(file);
-                const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/client/csf`, { url: pdfUrl }, {
+                const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/helper/uploadCSF`, { url: pdfUrl }, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
                 data = response.data;
