@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsQR from 'jsqr';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileCirclePlus, faSpinner } from '@fortawesome/free-solid-svg-icons';
+
 
 // Set the workerSrc property for pdfjsLib
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
@@ -90,11 +93,16 @@ const CsfUploader = ({ onUploadComplete }) => {
     return (
         <div className="flex items-center">
             <button
-                className="bg-black text-white py-2 px-4 rounded"
-                onClick={() => document.getElementById('csfFileInput').click()}
-            >
-                {loading ? 'Subiendo...' : 'Subir CSF'}
-            </button>
+  className="bg-black text-white py-2 px-4 rounded"
+  onClick={() => document.getElementById('csfFileInput').click()}
+>
+  {loading ? (
+    <FontAwesomeIcon icon={faSpinner} spin />
+  ) : (
+    <FontAwesomeIcon icon={faFileCirclePlus} />
+  )}
+</button>
+
             <input
                 type="file"
                 accept="application/pdf"

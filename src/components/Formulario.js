@@ -1,6 +1,10 @@
-import React from 'react';
-import SearchBar from './SearchBar';
+import React, { useState, useEffect } from 'react';
+import IdMgr from './idMgr';
+import FileMgr from './FileMgr';
 import CsfUploader from './CsfUploader';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTimes, faEdit, faSave, faTrash, faPlusCircle, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
+
 
 const Formulario = ({
   isModalOpen,
@@ -18,9 +22,61 @@ const Formulario = ({
   onFileUpload,
   onUploadComplete,
   handleFileClick,
+  onFileDelete,
 }) => {
+  const [initialFormData, setInitialFormData] = useState({});
+  const [modifiedFields, setModifiedFields] = useState({});
+  const [activeTab, setActiveTab] = useState('info');
+
+  useEffect(() => {
+    if (isEditMode) {
+      setInitialFormData(formData);
+    }
+  }, [isEditMode, formData]);
+
+  const handleInputChange = (field, value) => {
+    const updatedValue = Array.isArray(value)
+      ? value.map((val) => (typeof val === 'object' ? val._id.toString() : val.toString()))
+      : typeof value === 'object' ? [value._id.toString()] : value.toString();
+    
+    onInputChange(field, updatedValue);
+  
+    if (updatedValue !== initialFormData[field]) {
+      setModifiedFields(prev => ({ ...prev, [field]: updatedValue }));
+    } else {
+      setModifiedFields(prev => {
+        const updatedFields = { ...prev };
+        delete updatedFields[field];
+        return updatedFields;
+      });
+    }
+  };
+
+  const getResourceName = (field) => {
+    switch (field) {
+      case 'clienteId':
+        return 'cliente';
+      case 'empresaId':
+        return 'empresa';
+      case 'proyectoId':
+        return 'proyecto';
+      case 'tareaId':
+        return 'tarea';
+      case 'servicioId':
+        return 'servicio';
+      case 'facturaId':
+        return 'factura';
+      case 'colaboradorId':
+        return 'colaborador';
+      case 'usuarioId':
+        return 'usuario';
+      default:
+        return 'resource';
+    }
+  };
+
   const renderFormField = (field, value = '') => {
-    const recurso = field.replace('Id', '').toLowerCase();
+    const recurso = getResourceName(field);
 
     if (field.endsWith('Id')) {
       return (
@@ -49,9 +105,15 @@ const Formulario = ({
               )}
             </span>
           ) : (
-            <SearchBar
+            <IdMgr
               endpoint={`http://localhost:3010/api/${recurso}/get${recurso.charAt(0).toUpperCase()}${recurso.slice(1)}s`}
-              onSelect={(selectedId) => onInputChange(field, selectedId)}
+              existingIds={Array.isArray(value) ? value.map(item => item.toString()) : []}
+              isEditMode={isEditMode}
+              onSelect={(selectedId) => handleInputChange(field, selectedId)}
+              onDelete={(selectedId) => {
+                const updatedArray = value.filter(item => item.toString() !== selectedId);
+                handleInputChange(field, updatedArray);
+              }}
             />
           )}
         </div>
@@ -91,15 +153,17 @@ const Formulario = ({
         <div key={field} className="flex flex-col col-span-1">
           <label className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Archivos</label>
           {Array.isArray(value) && value.length > 0 ? (
-            value.map((fileUrl, index) => (
+            value.map((fileObj, index) => (
               <div key={index} className="mt-2 flex items-center">
-                <span className="text-sm text-gray-500">{fileUrl.split('/').pop()}</span>
+                <span className="text-sm text-gray-500">{fileObj.url.split('/').pop()}</span>
                 <button
-                  onClick={() => handleFileClick(fileUrl)}
-                  className="ml-2 p-1 bg-gray-200 text-gray-700 rounded"
-                >
-                  &#x22EE;
-                </button>
+  onClick={() => handleFileClick(fileObj.url)}
+  className="ml-2 p-1 bg-gray-200 text-gray-700 rounded"
+  aria-label="Opciones de archivo"
+>
+  <FontAwesomeIcon icon={faEllipsisV} />
+</button>
+
               </div>
             ))
           ) : (
@@ -188,7 +252,7 @@ const Formulario = ({
             readOnly={!isEditMode && !isCreateMode}
             className="p-2 border border-gray-300 rounded text-sm"
             style={{ minWidth: '0', width: 'auto', maxWidth: '100%' }}
-            onChange={(e) => onInputChange(field, e.target.value)}
+            onChange={(e) => handleInputChange(field, e.target.value)}
           />
         </div>
       );
@@ -196,66 +260,123 @@ const Formulario = ({
   };
 
   const renderForm = () => {
+    const filteredHeaders = headers.filter(header => !header.endsWith('Id') && header !== 'files');
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {headers.map((header) => renderFormField(header, formData[header]))}
+        {filteredHeaders.map((header) => renderFormField(header, formData[header]))}
       </div>
     );
+  };
+
+  const handleSave = () => {
+    onSave(modifiedFields);
   };
 
   return (
     isModalOpen && (
       <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
         <div className="bg-white w-3/4 max-w-4xl p-8 rounded-lg shadow-lg overflow-y-auto max-h-full relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-gray-200 rounded-full"
-          >
-            X
-          </button>
+        <button
+  onClick={onClose}
+  className="absolute top-4 right-4 p-2 bg-gray-200 rounded-full"
+  aria-label="Cerrar"
+>
+  <FontAwesomeIcon icon={faTimes} />
+</button>
+
           <div className="flex items-center space-x-4 mb-4">
             {!isCreateMode && (
               <>
                 <button
-                  onClick={onEdit}
-                  className="p-2 bg-blue-500 text-white rounded"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={onSave}
-                  disabled={!isEditMode}
-                  className="p-2 bg-green-500 text-white rounded"
-                >
-                  Guardar
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="p-2 bg-red-500 text-white rounded"
-                >
-                  Borrar
-                </button>
+  onClick={onEdit}
+  className="p-2 bg-blue-500 text-white rounded"
+  aria-label="Editar"
+>
+  <FontAwesomeIcon icon={faEdit} />
+</button>
+
+<button
+  onClick={onSave}
+  disabled={!isEditMode}
+  className="p-2 bg-green-500 text-white rounded"
+  aria-label="Guardar"
+>
+  <FontAwesomeIcon icon={faSave} />
+</button>
+
+<button
+  onClick={onDelete}
+  className="p-2 bg-red-500 text-white rounded"
+  aria-label="Borrar"
+>
+  <FontAwesomeIcon icon={faTrash} />
+</button>
+
               </>
             )}
             {isCreateMode && (
-              <button
-                onClick={onSave}
-                className="p-2 bg-green-500 text-white rounded"
-              >
-                Crear
-              </button>
+             <button
+             onClick={onSave}
+             className="p-2 bg-green-500 text-white rounded"
+             aria-label="Crear"
+           >
+             <FontAwesomeIcon icon={faPlusCircle} />
+           </button>
+           
             )}
           </div>
-          <div className="mt-4">
+          <div className="mb-4">
             <h3 className="text-lg font-bold mb-4">
               {isCreateMode ? 'Crear Nuevo Registro' : 'Detalles del Elemento Seleccionado'}
             </h3>
+            <div className="flex space-x-4 mb-4">
+              <label
+                onClick={() => setActiveTab('info')}
+                className={`p-2 rounded cursor-pointer ${activeTab === 'info' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+              >
+                Información
+              </label>
+              <label
+                onClick={() => setActiveTab('relations')}
+                className={`p-2 rounded cursor-pointer ${activeTab === 'relations' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+              >
+                Relaciones
+              </label>
+              <label
+                onClick={() => setActiveTab('files')}
+                className={`p-2 rounded cursor-pointer ${activeTab === 'files' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+              >
+                Archivos
+              </label>
+            </div>
             {isCSFMode && (
               <div className="mb-4">
                 <CsfUploader onUploadComplete={onUploadComplete} />
               </div>
             )}
-            {renderForm()} {/* Usando formData para asegurar que los campos estén editables */}
+            {activeTab === 'info' && renderForm()}
+            {activeTab === 'relations' && (
+              headers.filter(header => header.endsWith('Id')).map((header) => (
+                <IdMgr
+                  key={header}
+                  endpoint={`http://localhost:3010/api/${getResourceName(header)}/get${getResourceName(header).charAt(0).toUpperCase()}${getResourceName(header).slice(1)}s`}
+                  existingIds={formData[header] || []}
+                  isEditMode={isEditMode}
+                  onSelect={(selectedId) => handleInputChange(header, [...(formData[header] || []), selectedId])}
+                  onDelete={(selectedId) => handleInputChange(header, (formData[header] || []).filter(id => id !== selectedId))}
+                />
+              ))
+            )}
+            {activeTab === 'files' && (
+              <FileMgr
+                files={formData.files || []}
+                isEditMode={isEditMode}
+                onUpload={(newFiles) => onFileUpload('files', newFiles)}
+                onDelete={(fileUrl) => onFileDelete('files', fileUrl)}
+                onFileClick={handleFileClick}
+              />
+            )}
           </div>
         </div>
       </div>

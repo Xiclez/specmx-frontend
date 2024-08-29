@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Formulario from './Formulario';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { useLocation } from 'react-router-dom';  
 
-const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint }) => {
+const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, onUploadComplete }) => {
   const [data, setData] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -14,9 +17,10 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [formData, setFormData] = useState({});
+  const [initialFormData, setInitialFormData] = useState({});
   const [isCSFMode, setIsCSFMode] = useState(false);
   const [resourceData, setResourceData] = useState({});  // Para almacenar los datos de los recursos asociados
-
+  const location = useLocation();
   const excludedFields = ['_id', 'createdAt', 'updatedAt', '__v'];
 
   const fetchData = async () => {
@@ -42,7 +46,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
   const fetchResource = async (field, resourceId) => {
     let recurso = field.replace('Id', '').toLowerCase();
     let endpoint = `http://localhost:3010/api/${recurso}/get${recurso.charAt(0).toUpperCase()}${recurso.slice(1)}/${resourceId}`;
-
+  
     try {
       const response = await axios.get(endpoint);
       setResourceData((prevData) => ({
@@ -53,6 +57,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
       console.error(`Error fetching ${recurso}:`, error);
     }
   };
+  
 
   useEffect(() => {
     fetchData();
@@ -79,6 +84,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     setSelectedField(null);
     setIsEditMode(false);
     setFormData(filteredData[index]);
+    setInitialFormData(filteredData[index]); // Guardar el estado inicial de los datos
 
     // Fetch resource data for fields ending in 'Id'
     Object.keys(filteredData[index]).forEach((field) => {
@@ -99,10 +105,17 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
 
   const handleSave = async () => {
     try {
+      const modifiedFields = Object.keys(formData).reduce((changes, key) => {
+        if (JSON.stringify(formData[key]) !== JSON.stringify(initialFormData[key])) {
+          changes[key] = formData[key];
+        }
+        return changes;
+      }, {});
+
       if (isCreateMode) {
-        await axios.post(createEndpoint, formData);
+        await axios.post(createEndpoint, modifiedFields);
       } else {
-        await axios.put(`${updateEndpoint}/${formData._id}`, formData);
+        await axios.put(`${updateEndpoint}/${formData._id}`, modifiedFields);
       }
 
       setIsModalOpen(false);
@@ -122,6 +135,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     setExpandedRow(null);
     setSelectedField(null);
     setFormData({});
+    setInitialFormData({});
     if (fromCSF) {
       setIsCSFMode(true); // Activa el modo CSF si se selecciona "Crear a partir de CSF"
     } else {
@@ -159,40 +173,60 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
   };
 
   const handleUploadComplete = (data) => {
-    // Mapea automáticamente los datos recibidos desde CSF al formData
+    console.log('Datos recibidos en handleUploadComplete:', data);
+
+    if (location.pathname === '/empresas') {
+      if (data.CURP && !data.DenominacionRazonSocial) {
+        console.log('Datos recibidos corresponden a una Persona Física en Empresas.');
+        if (onUploadComplete) {
+          onUploadComplete(data);  // Enviar los datos al manejador externo (Empresas.js)
+        }
+        return; // Detener el flujo normal si es una Persona Física en Empresas
+      }
+    } else if (location.pathname === '/clientes') {
+      if (!data.CURP && data.DenominacionRazonSocial) {
+        console.log('Datos recibidos corresponden a una Persona Moral en Clientes.');
+        if (onUploadComplete) {
+          onUploadComplete(data);  // Enviar los datos al manejador externo (Clientes.js)
+        }
+        return; // Detener el flujo normal si es una Persona Moral en Clientes
+      }
+    }
+
+    // Si no corresponde a los casos anteriores, continuar con el flujo normal
     setFormData((prevData) => ({
       ...prevData,
       ...data,
     }));
+
     setIsCSFMode(false);
-  };
+};
 
   const handleFileUpload = async (field, files) => {
     if (!files || files.length === 0) return;
-
+  
     const formData = new FormData();
     formData.append(field === 'profilePhoto' ? 'image' : 'file', files[0]);
-
+  
     try {
-      // Hacer la solicitud al servidor para subir el archivo
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/helper/uploadFile`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
-      // Obtener la URL del archivo subido desde la respuesta
+  
       const uploadedUrl = response.data.url;
-
-      // Actualizar el estado con la nueva URL
+  
       setFormData((prevData) => ({
         ...prevData,
-        [field]: field === 'files' ? [...(prevData[field] || []), uploadedUrl] : uploadedUrl,
+        [field]: field === 'files' ? [...(prevData[field] || []), { name: files[0].name.split('.')[0], url: uploadedUrl }] : uploadedUrl,
       }));
+      
     } catch (error) {
       console.error('Error al subir el archivo:', error);
     }
   };
+  
 
   const handleFileClick = (fileUrl) => {
     const options = [];
@@ -219,7 +253,7 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
     }
 
     // Mostrar un menú contextual o algún otro tipo de interfaz para mostrar estas opciones
-    // Por simplicidad, usaré `window.prompt` pero puedes usar un menú más sofisticado según tus necesidades
+    // Por simplicidad, usaré window.prompt pero puedes usar un menú más sofisticado según tus necesidades
 
     const selectedOption = window.prompt(
       `Opciones para el archivo:\n1. ${options[0].label}${options[1] ? `\n2. ${options[1].label}` : ''}`,
@@ -267,12 +301,14 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
         />
 
         <div className="relative">
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="p-2 bg-gray-200 rounded"
-          >
-            Mostrar
-          </button>
+        <button
+  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+  className="p-2 bg-gray-200 rounded"
+  aria-label="Mostrar"
+>
+  <FontAwesomeIcon icon={faEye} />
+</button>
+
           {isDropdownOpen && (
             <div className="absolute mt-2 w-48 bg-white border border-gray-300 rounded shadow-lg z-10">
               {headers.map((header) => (
@@ -291,12 +327,14 @@ const TablaDinamica = ({ getEndpoint, createEndpoint, updateEndpoint, deleteEndp
         </div>
 
         <div className="relative">
-          <button
-            onClick={() => handleCreate(true)}
-            className="p-2 bg-yellow-500 rounded"
-          >
-            Crear
-          </button>
+        <button
+  onClick={() => handleCreate(true)}
+  className="p-2 bg-yellow-500 rounded"
+  aria-label="Crear"
+>
+  <FontAwesomeIcon icon={faPlus} />
+</button>
+
         </div>
       </div>
 

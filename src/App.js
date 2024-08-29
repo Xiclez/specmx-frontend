@@ -9,6 +9,11 @@ import { Facturas } from './screens/Facturas';
 import { Servicios } from './screens/Servicios';
 import { Colaboradores } from './screens/Colaboradores';
 import { Usuarios } from './screens/Usuarios';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { fas } from '@fortawesome/free-solid-svg-icons';
+
+library.add(fas);
+
 
 /*
 import { TareasTable, TareaForm } from './components/Tareas';
